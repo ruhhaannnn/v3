@@ -81,6 +81,9 @@
                     <option value="IRAN">IRAN</option>
                     <option value="ISRAEL">ISRAEL</option>
                     <option value="LEBANON">LEBANON</option>
+                    <option value="SYRIA">SYRIA</option>
+                    <option value="IRAQ">IRAQ</option>
+                    <option value="YEMEN">YEMEN</option>
                     <option value="UAE">DUBAI / UAE</option>
                     <option value="QATAR">QATAR</option>
                     <option value="OMAN">OMAN</option>
@@ -130,13 +133,19 @@
         <div class="panel panel-tall">
             <div class="panel-header">Live Cam - Tel Aviv <span>Israel Feed</span></div>
             <div class="panel-content" style="background: #000; position: relative;">
-                <iframe src="https://www.youtube.com/embed/4E-iFtUM2kk?autoplay=1&mute=1&playsinline=1" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen style="position:absolute; top:0; left:0; width:100%; height:100%; border:none;"></iframe>
+                <iframe src="https://www.youtube.com/embed/4E-iFtUM2kk?autoplay=1&mute=1&playsinline=1&controls=0&disablekb=1" allow="autoplay; encrypted-media; picture-in-picture" style="position:absolute; top:0; left:0; width:100%; height:100%; border:none; pointer-events: none;"></iframe>
+                <button onclick="toggleFullscreen(this)" class="custom-fs-btn" title="Fullscreen">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+                </button>
             </div>
         </div>
         <div class="panel panel-tall">
             <div class="panel-header">Live Cam - Lebanon <span>Beirut Feed</span></div>
             <div class="panel-content" style="background: #000; position: relative;">
-                <iframe src="https://www.youtube.com/embed/gmtlJ_m2r5A?autoplay=1&mute=1&playsinline=1" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen style="position:absolute; top:0; left:0; width:100%; height:100%; border:none;"></iframe>
+                <iframe src="https://www.youtube.com/embed/gmtlJ_m2r5A?autoplay=1&mute=1&playsinline=1&controls=0&disablekb=1" allow="autoplay; encrypted-media; picture-in-picture" style="position:absolute; top:0; left:0; width:100%; height:100%; border:none; pointer-events: none;"></iframe>
+                <button onclick="toggleFullscreen(this)" class="custom-fs-btn" title="Fullscreen">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+                </button>
             </div>
         </div>
     </div>
