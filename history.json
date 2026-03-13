@@ -1219,5 +1219,56 @@
     "eventType": "missile",
     "timestamp": 1773316800000,
     "source": "AFP / The Hindu"
+  },
+  {
+    "id": "feb28_ksa_02",
+    "title": "Early Warning Sirens Triggered Amid Regional Barrage",
+    "location": "ARAR, SAUDI ARABIA",
+    "lat": 30.9833,
+    "lng": 41.0167,
+    "eventType": "siren",
+    "timestamp": 1772275200000,
+    "source": "Saudi Civil Defense"
+  },
+  {
+    "id": "mar04_ksa_01",
+    "title": "Attempted Drone Strike on Desalination Plant Intercepted",
+    "location": "AL JUBAIL, SAUDI ARABIA",
+    "lat": 27.0111,
+    "lng": 49.6583,
+    "eventType": "intercept",
+    "timestamp": 1772600000000,
+    "source": "Saudi Defence Ministry / Reuters"
+  },
+  {
+    "id": "mar06_ksa_01",
+    "title": "Militia Drone Shot Down Approaching King Khalid Military City",
+    "location": "HAFAR AL-BATIN, SAUDI ARABIA",
+    "lat": 28.4342,
+    "lng": 45.9636,
+    "eventType": "intercept",
+    "timestamp": 1772780000000,
+    "source": "Al Arabiya"
+  },
+  {
+    "id": "mar09_ksa_01",
+    "title": "Sirens Triggered as Intercepted Debris Falls Near Port Zones",
+    "location": "DAMMAM, SAUDI ARABIA",
+    "lat": 26.4207,
+    "lng": 50.0888,
+    "eventType": "siren",
+    "timestamp": 1773045000000,
+    "source": "Saudi Press Agency"
+  },
+  {
+    "id": "mar11_ksa_02",
+    "title": "Solitary Drone Intercepted Over Red Sea Approaches",
+    "location": "JEDDAH, SAUDI ARABIA",
+    "lat": 21.4858,
+    "lng": 39.1925,
+    "eventType": "intercept",
+    "timestamp": 1773216000000,
+    "source": "Saudi Defence Ministry"
   }
+]
 ]
