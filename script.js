@@ -71,6 +71,16 @@ async function fetchWithFastestProxy(targetUrl, type = 'json') {
 
 setInterval(() => { document.getElementById('clock').innerText = new Date().toUTCString(); }, 1000);
 
+// CUSTOM FULLSCREEN FUNCTION
+function toggleFullscreen(btn) {
+    const container = btn.parentElement;
+    if (!document.fullscreenElement) {
+        container.requestFullscreen().catch(err => console.log(err));
+    } else {
+        document.exitFullscreen();
+    }
+}
+
 async function scrapeTelegramChannel(channel, extractMedia = false) {
     try {
         const htmlText = await fetchWithFastestProxy(`https://t.me/s/${channel}`, 'html');
@@ -92,6 +102,7 @@ async function scrapeTelegramChannel(channel, extractMedia = false) {
                 const link = msg.getAttribute('data-post') ? 'https://t.me/' + msg.getAttribute('data-post') : `https://t.me/s/${channel}`;
                 
                 let mediaHTML = '';
+                let videoSrc = null;
                 if (extractMedia) {
                     const photoWrap = msg.querySelector('.tgme_widget_message_photo_wrap');
                     if (photoWrap && photoWrap.style.backgroundImage) {
@@ -100,11 +111,12 @@ async function scrapeTelegramChannel(channel, extractMedia = false) {
                     }
                     const videoWrap = msg.querySelector('video');
                     if (videoWrap && videoWrap.src) {
-                        // FORCES AUTOPLAY, MUTED, AND LOOP FOR THE MAP POPUP
-                        mediaHTML = `<video src="${videoWrap.src}" autoplay loop muted playsinline style="width:100%; max-height:250px; border-radius:4px; margin-top:8px; background: #000; border: 1px solid var(--border-color);"></video>`;
+                        videoSrc = videoWrap.src;
+                        // NO AUTOPLAY in the News Sidebar Feed
+                        mediaHTML = `<video src="${videoSrc}" controls playsinline style="width:100%; max-height:250px; border-radius:4px; margin-top:8px; background: #000; border: 1px solid var(--border-color);"></video>`;
                     }
                 }
-                posts.push({ channel, text, date: msgDate, link, mediaHTML });
+                posts.push({ channel, text, date: msgDate, link, mediaHTML, videoSrc });
             }
         }
         return posts;
@@ -278,7 +290,7 @@ function saveStoredIntel(dataArray) { localStorage.setItem('iqwr_intel_db', JSON
 
 let globalIntelData = [];
 
-// FETCH EXTERNAL HISTORY JSON (if available)
+// FETCH EXTERNAL HISTORY JSON
 async function loadExternalHistory() {
     try {
         const response = await fetch('./history.json');
@@ -286,7 +298,6 @@ async function loadExternalHistory() {
             const externalData = await response.json();
             let localData = getStoredIntel();
             
-            // Merge avoiding exact duplicates based on ID or Location/Timestamp
             externalData.forEach(ext => {
                 const exists = localData.some(loc => loc.id === ext.id || (loc.location === ext.location && loc.timestamp === ext.timestamp));
                 if(!exists) localData.push(ext);
@@ -333,7 +344,6 @@ function determineEventType(text) {
 
 async function fetchLiveOSINT() {
     try {
-        // Now fetching WITH media extraction set to true
         const [amkData, rnintelData, ddData, auroraData, clashData] = await Promise.all([
             scrapeTelegramChannel('AMK_Mapping', true), 
             scrapeTelegramChannel('rnintel', true), 
@@ -374,7 +384,7 @@ async function fetchLiveOSINT() {
                         id: Math.random().toString(), title: title, eventType: evtType,
                         lat: lat + (Math.random()-0.5)*0.03, lng: lng + (Math.random()-0.5)*0.03, 
                         location: detectedLoc, region: region, timestamp: post.date.getTime(), 
-                        source: post.channel.toUpperCase(), mediaHTML: post.mediaHTML // Storing Media
+                        source: post.channel.toUpperCase(), mediaHTML: post.mediaHTML, videoSrc: post.videoSrc // Media Saved Here
                     });
                     newFound = true;
                     if(evtType === 'missile') highestAlert = 'missile';
@@ -485,19 +495,23 @@ function renderMapData() {
         if (strike.timeAgo > 6 && !blinkClass) ring.classList.add('inactive-pulse');
         elContainer.appendChild(ring);
 
-        // SIREN RADIUS INJECTION
         if (strike.eventType === 'siren') {
             const sirenCircle = document.createElement('div');
             sirenCircle.className = 'siren-radius';
             elContainer.appendChild(sirenCircle);
         }
 
-        // MEDIA POPUP INJECTION
+        // MAP POPUP MEDIA ENGINE (AUTOPLAY YES)
+        let mapMedia = strike.mediaHTML ? strike.mediaHTML : '';
+        if (strike.videoSrc) {
+            mapMedia = `<video src="${strike.videoSrc}" autoplay loop muted playsinline style="width:100%; max-height:200px; border-radius:4px; margin-top:8px; background: #000; border: 1px solid #333;"></video>`;
+        }
+
         const popupHTML = `<div style="display:flex; justify-content:space-between; margin-bottom: 6px; border-bottom: 1px solid #333; padding-bottom: 4px;">
                 <strong style="color:${hex}; font-size:1.1em;">${strike.location}</strong>
                 <span style="color:#aaa; font-size:0.8em; align-self:center;">${timeText}</span></div>
             <div style="font-size:0.9em; line-height:1.4; margin-bottom: 8px; max-height: 120px; overflow-y: auto;">${strike.title}</div>
-            ${strike.mediaHTML ? strike.mediaHTML : ''}
+            ${mapMedia}
             <div style="font-size:0.7em; color:#888; text-transform:uppercase; border-top: 1px dashed #333; padding-top: 4px; margin-top: 8px;">SOURCE: ${strike.source}</div>`;
         
         const popup = new maplibregl.Popup({ offset: 10, closeOnClick: false }).setHTML(popupHTML);
