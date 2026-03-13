@@ -119,17 +119,17 @@ header {
     animation: map-pulse 1.5s infinite ease-out; pointer-events: none; z-index: 1;
 }
 
-/* SIREN RADIUS ANIMATION */
+/* REDUCED SIREN RADIUS ANIMATION */
 @keyframes siren-pulse {
     0% { transform: scale(0.5); opacity: 0.8; }
     100% { transform: scale(1.5); opacity: 0; }
 }
 .siren-radius {
     position: absolute;
-    width: 200px;
-    height: 200px;
-    top: -100px;
-    left: -100px;
+    width: 60px;
+    height: 60px;
+    top: -30px;
+    left: -30px;
     background: rgba(59, 130, 246, 0.2);
     border: 1px solid rgba(59, 130, 246, 0.6);
     border-radius: 50%;
@@ -255,4 +255,31 @@ header {
 .zero-marker.critical-blink .zero-dot { box-shadow: 0 0 15px #fff, 0 0 30px #fff !important; background-color: #fff !important; }
 .zero-marker.critical-blink .zero-pulse, .zero-marker.critical-blink .inactive-pulse { 
     display: block !important; border-color: #fff !important; border-width: 2px !important; animation: map-pulse 0.5s infinite ease-out !important; 
+}
+
+/* CUSTOM FULLSCREEN OVERLAY BUTTON */
+.custom-fs-btn {
+    position: absolute;
+    bottom: 15px;
+    right: 15px;
+    background: rgba(0, 0, 0, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #fff;
+    padding: 8px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    z-index: 10;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.custom-fs-btn:hover {
+    background: rgba(0, 0, 0, 0.9);
+    border-color: #fff;
+    transform: scale(1.05);
+}
+.custom-fs-btn svg {
+    width: 18px;
+    height: 18px;
 }
