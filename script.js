@@ -28,8 +28,8 @@ const map = new maplibregl.Map({
         "sources": { "carto-dark": { "type": "raster", "tiles": ["https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"], "tileSize": 256 } },
         "layers": [{"id": "carto-dark-layer", "type": "raster", "source": "carto-dark", "minzoom": 0, "maxzoom": 22}]
     },
-    center: [44.0, 29.0], 
-    zoom: 3.5, 
+    center: [44.0, 29.0], // Centers on the Middle East
+    zoom: 3.5, // Zooms out to show Egypt, Israel, Gulf, and Iran
     pitch: 40, 
     bearing: 0,
     interactive: false 
@@ -105,9 +105,8 @@ window.toggleIframePlay = function(btn, iframeId) {
     btn.innerText = isPlaying ? '[ PLAY ]' : '[ PAUSE ]';
 };
 
-// FIX: Native HTML5 Video Player Toggle
+// Native HTML5 Video Player Toggle
 window.toggleNativeVideo = function(vid) {
-    // Force pause on all other videos to save bandwidth and stop overlapping audio
     document.querySelectorAll('video').forEach(v => {
         if (v !== vid) { 
             v.pause(); 
@@ -118,7 +117,7 @@ window.toggleNativeVideo = function(vid) {
     const btnOverlay = vid.nextElementSibling;
     if (vid.paused) {
         vid.play();
-        vid.muted = false; // Unmute on explicit user click
+        vid.muted = false; 
         if(btnOverlay) btnOverlay.style.display = 'none';
     } else {
         vid.pause();
@@ -152,14 +151,12 @@ window.toggleFullScreen = function(elem) {
 };
 
 window.switchTab = function(tabId, el) {
-    // FIX: Hard-pause all HTML5 videos and reset UI when leaving the tab
     document.querySelectorAll('video').forEach(vid => {
         vid.pause();
         vid.muted = true;
         if(vid.nextElementSibling) vid.nextElementSibling.style.display = 'flex';
     });
     
-    // Pause YouTube iframes
     document.querySelectorAll('.live-cam-wrapper iframe').forEach(iframe => {
         iframe.contentWindow.postMessage(JSON.stringify({ "event": "command", "func": "pauseVideo", "args": [] }), '*');
     });
@@ -218,7 +215,7 @@ setInterval(() => {
 // 3. BASELINE HISTORICAL DATA ENGINE
 // ==========================================
 const historicalRawData = [
- {"id":"feb28_01","title":"Operation Epic Fury: Decapitation Strike Kills Supreme Leader Khamenei","location":"TEHRAN, IRAN","lat":35.6892,"lng":51.389,"eventType":"missile","timestamp":1772265600000,"source":"US DoD / IDF / Press TV","mediaHTML":"<iframe width='100%' height='200' src='https://www.youtube.com/embed/hQzZUq-NGFI?autoplay=1&mute=1&controls=0' frameborder='0' allow='autoplay; encrypted-media' style='border-radius:4px; margin-top:8px; border: 1px solid #333;'></iframe>"},
+  {"id":"feb28_01","title":"Operation Epic Fury: Decapitation Strike Kills Supreme Leader Khamenei","location":"TEHRAN, IRAN","lat":35.6892,"lng":51.389,"eventType":"missile","timestamp":1772265600000,"source":"US DoD / IDF / Press TV","mediaHTML":"<iframe width='100%' height='200' src='https://www.youtube.com/embed/hQzZUq-NGFI?autoplay=1&mute=1&controls=0' frameborder='0' allow='autoplay; encrypted-media' style='border-radius:4px; margin-top:8px; border: 1px solid #333;'></iframe>"},
   {"id":"feb28_02","title":"US Strike Hits Girls' School Near IRGC Naval Base","location":"MINAB, IRAN","lat":27.1466,"lng":57.08,"eventType":"missile","timestamp":1772257500000,"source":"New York Times / CFR"},
   {"id":"feb28_03","title":"IAF Strikes 500 Targets Including IRGC Aerospace Facilities","location":"TABRIZ, IRAN","lat":38.0792,"lng":46.2887,"eventType":"missile","timestamp":1772261100000,"source":"Alma Research Center"},
   {"id":"feb28_shiraz_01","title":"Airstrikes Target IRGC Imam Ali and Imam Javad Garrisons","location":"SHIRAZ, IRAN","lat":29.5918,"lng":52.5836,"eventType":"missile","timestamp":1772269200000,"source":"JINSA / OSINT"},
@@ -517,7 +514,6 @@ let baselineNewsData = [];
 
 historicalRawData.forEach(item => {
     let safeMedia = item.mediaHTML || "";
-    // FIX: Apply lazy loading and non-autoplay to historical data videos too
     if (item.videoSrc && !item.videoSrc.includes("PASTE_YOUR")) {
         safeMedia = `
         <div style="position:relative; width:100%; border-radius:6px; overflow:hidden; border: 1px solid rgba(255,255,255,0.1); background:#050505; margin-top:8px;">
@@ -589,29 +585,9 @@ const geoDB = {
 const tacticalSources = ['AMK_Mapping', 'rnintel', 'DDGeopolitics', 'clashreport'];
 const newsSources = ['AMK_Mapping', 'rnintel', 'DDGeopolitics', 'clashreport', 'presstv', 'me_observer_TG', 'spectatorindex', 'aljazeeraenglish', 'ILtoday'];
 
-async function fetchWithFastestProxy(targetUrl, type = 'json') {
-    const separator = targetUrl.includes('?') ? '&' : '?';
-    const brokenCacheUrl = `${targetUrl}${separator}nocache=${Date.now()}_${Math.random().toString(36).substring(7)}`;
-    const encoded = encodeURIComponent(brokenCacheUrl);
-    
-    const proxies = [
-        `https://corsproxy.io/?url=${encoded}`,
-        `https://api.allorigins.win/raw?url=${encoded}`,
-        `https://api.codetabs.com/v1/proxy?quest=${encoded}`
-    ];
-
-    for (let proxy of proxies) {
-        try {
-            const res = await fetch(proxy, { cache: "no-store", mode: 'cors' });
-            if (res.ok) return type === 'json' ? await res.json() : await res.text();
-        } catch(e) {}
-    }
-    return null;
-}
-
-// -------------------------------------------------------------------
-// 5. FIREBASE REALTIME LISTENERS (MAP ONLY) & LOCAL RENDERING
-// -------------------------------------------------------------------
+// ==========================================
+// 5. FIREBASE REALTIME LISTENERS (MAP ONLY)
+// ==========================================
 
 onValue(mapDbRef, (snapshot) => {
     const liveData = snapshot.val() ? Object.values(snapshot.val()) : [];
@@ -627,174 +603,175 @@ onValue(mapDbRef, (snapshot) => {
     renderMapData();
 });
 
-// -------------------------------------------------------------------
-// 6. SCRAPERS & OPTIMIZED RENDER CYCLE
-// -------------------------------------------------------------------
+// ==========================================
+// 6. LIGHTWEIGHT RSS-TO-JSON SCRAPER
+// ==========================================
 const blockedKeywords = ['press release', 'statement', 'speech', 'spokesperson', 'condemn', 'condemns', 'says', 'said', 'announced', 'official', 'meeting', 'diplomat', 'minister', 'claims'];
 
-window.fetchLiveOSINT = async function() {
+async function fetchTelegramJSON(channel) {
+    const rssUrl = encodeURIComponent(`https://rsshub.app/telegram/channel/${channel}`);
+    const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${rssUrl}&api_key=`; 
+    
     try {
-        tacticalSources.forEach(async (source) => {
-            const htmlText = await fetchWithFastestProxy(`https://t.me/s/${source}`, 'html');
-            if (htmlText) {
-                const doc = new DOMParser().parseFromString(htmlText, 'text/html');
-                const sourceName = source.toUpperCase();
-                
-                doc.querySelectorAll('.tgme_widget_message').forEach(msg => {
-                    const textEl = msg.querySelector('.tgme_widget_message_text');
-                    const dateEl = msg.querySelector('time.time');
-                    if(textEl && dateEl) {
-                        let text = textEl.innerText.toLowerCase();
-                        
-                        if (blockedKeywords.some(word => text.includes(word))) return; 
-                        
-                        let evtType = null;
-                        if (text.includes('intercept') || text.includes('shot down')) evtType = 'intercept';
-                        else if (text.includes('siren') || text.includes('alert')) evtType = 'siren';
-                        else if (text.includes('drone') || text.includes('uav')) evtType = 'drone';
-                        else if (text.includes('missile') || text.includes('rocket') || text.includes('strike') || text.includes('explosion')) evtType = 'missile';
-                        
-                        if (evtType) {
-                            for (const [key, geoData] of Object.entries(geoDB)) {
-                                if (geoData.aliases.some(a => text.includes(a))) {
-                                    
-                                    let mediaHTML = '';
-                                    const photoWrap = msg.querySelector('.tgme_widget_message_photo_wrap');
-                                    if (photoWrap && photoWrap.style.backgroundImage) {
-                                        const urlMatch = photoWrap.style.backgroundImage.match(/url\(['"]?(.*?)['"]?\)/);
-                                        if (urlMatch && urlMatch[1]) {
-                                            mediaHTML = `<img src="${urlMatch[1]}" loading="lazy" style="width:100%; display:block; border-radius:6px; max-height:180px; object-fit:contain; border: 1px solid rgba(255,255,255,0.1);" />`;
-                                        }
-                                    }
-                                    const videoWrap = msg.querySelector('video');
-                                    if (videoWrap && videoWrap.src) {
-                                        mediaHTML = `
-                                        <div style="position:relative; width:100%; border-radius:6px; overflow:hidden; border: 1px solid rgba(255,255,255,0.1); background:#050505; margin-top:8px;">
-                                            <video preload="none" src="${videoWrap.src}" playsinline style="width:100%; display:block; max-height:180px; object-fit:contain; cursor:pointer;" onclick="toggleNativeVideo(this)"></video>
-                                            <div class="vid-play-btn" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:rgba(48,209,88,0.8); border-radius:50%; width:40px; height:40px; display:flex; justify-content:center; align-items:center; pointer-events:none;">
-                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                                            </div>
-                                        </div>`;
-                                    }
-
-                                    let jittered = getJitteredCoords(geoData.coords[1], geoData.coords[0]);
-                                    let ts = new Date(dateEl.getAttribute('datetime')).getTime();
-                                    const uniqueId = sourceName.replace(/[^a-zA-Z0-9]/g, '') + '_' + ts;
-
-                                    const newObj = {
-                                        id: uniqueId, title: textEl.innerText, eventType: evtType,
-                                        lat: jittered.lat, lng: jittered.lng, location: key.toUpperCase(), 
-                                        timestamp: ts, source: sourceName, mediaHTML: mediaHTML
-                                    };
-                                    
-                                    if(!globalIntelData.some(d => Math.abs(d.timestamp - newObj.timestamp) < 300000 && d.location === newObj.location)) {
-                                        globalIntelData.push(newObj);
-                                        renderMapData();
-                                        set(ref(db, 'mapEvents/' + uniqueId), newObj);
-                                        triggerGlobalAlert(evtType);
-                                    }
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                });
-            }
-        });
-    } catch (err) {}
+        const response = await fetch(apiUrl, { cache: "no-store" });
+        if (response.ok) {
+            return await response.json();
+        }
+    } catch (e) {
+        console.error(`Failed to fetch ${channel}`);
+    }
+    return null;
 }
 
-// FIX: DOM Render Debouncing. Wait 500ms for fetches to settle before drawing to screen to avoid freezing videos.
+window.fetchLiveOSINT = async function() {
+    tacticalSources.forEach(async (source) => {
+        const data = await fetchTelegramJSON(source);
+        if (!data || !data.items) return;
+        
+        const sourceName = source.toUpperCase();
+        
+        data.items.forEach(item => {
+            let rawText = item.description.replace(/<[^>]*>?/gm, '');
+            let text = rawText.replace(/[\n\r]+/g, ' - ').replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '').trim();
+            let lowerText = text.toLowerCase();
+            
+            if (blockedKeywords.some(word => lowerText.includes(word))) return;
+            
+            let evtType = null;
+            if (lowerText.includes('intercept') || lowerText.includes('shot down')) evtType = 'intercept';
+            else if (lowerText.includes('siren') || lowerText.includes('alert')) evtType = 'siren';
+            else if (lowerText.includes('drone') || lowerText.includes('uav')) evtType = 'drone';
+            else if (lowerText.includes('missile') || lowerText.includes('rocket') || lowerText.includes('strike') || lowerText.includes('explosion')) evtType = 'missile';
+            
+            if (evtType) {
+                for (const [key, geoData] of Object.entries(geoDB)) {
+                    if (geoData.aliases.some(a => lowerText.includes(a))) {
+                        
+                        let mediaHTML = '';
+                        if (item.enclosure && item.enclosure.link) {
+                            if (item.enclosure.type.includes('image')) {
+                                mediaHTML = `<img src="${item.enclosure.link}" loading="lazy" style="width:100%; display:block; border-radius:6px; max-height:180px; object-fit:contain; border: 1px solid rgba(255,255,255,0.1);" />`;
+                            } else if (item.enclosure.type.includes('video')) {
+                                mediaHTML = `
+                                <div style="position:relative; width:100%; border-radius:6px; overflow:hidden; border: 1px solid rgba(255,255,255,0.1); background:#050505; margin-top:8px;">
+                                    <video preload="none" src="${item.enclosure.link}" playsinline style="width:100%; display:block; max-height:180px; object-fit:contain; cursor:pointer;" onclick="toggleNativeVideo(this)"></video>
+                                    <div class="vid-play-btn" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:rgba(48,209,88,0.8); border-radius:50%; width:40px; height:40px; display:flex; justify-content:center; align-items:center; pointer-events:none;">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                                    </div>
+                                </div>`;
+                            }
+                        }
+
+                        let jittered = getJitteredCoords(geoData.coords[1], geoData.coords[0]);
+                        // Fix date parsing for cross-browser support
+                        let ts = new Date(item.pubDate.replace(/-/g, '/')).getTime(); 
+                        if(isNaN(ts)) ts = Date.now();
+                        const uniqueId = sourceName.replace(/[^a-zA-Z0-9]/g, '') + '_' + ts;
+
+                        const newObj = {
+                            id: uniqueId, title: text, eventType: evtType,
+                            lat: jittered.lat, lng: jittered.lng, location: key.toUpperCase(), 
+                            timestamp: ts, source: sourceName, mediaHTML: mediaHTML
+                        };
+                        
+                        if(!globalIntelData.some(d => Math.abs(d.timestamp - newObj.timestamp) < 300000 && d.location === newObj.location)) {
+                            globalIntelData.push(newObj);
+                            renderMapData();
+                            set(ref(db, 'mapEvents/' + uniqueId), newObj);
+                            triggerGlobalAlert(evtType);
+                        }
+                        break;
+                    }
+                }
+            }
+        });
+    });
+};
+
 let renderTimeout;
 window.debouncedRenderNews = function() {
     clearTimeout(renderTimeout);
     renderTimeout = setTimeout(() => {
         renderNewsFeeds();
     }, 500); 
-}
+};
 
-// FIX: Progressive Staggered Channel Loading
 window.loadFeeds = async function() {
-    newsSources.forEach((u, index) => {
+    let delay = 0;
+    
+    // Stagger API calls to prevent rate-limiting and browser choking
+    for (const u of newsSources) {
         setTimeout(async () => {
-            try {
-                const html = await fetchWithFastestProxy(`https://t.me/s/${u}`, 'html');
-                if (!html) return;
+            const data = await fetchTelegramJSON(u);
+            if (!data || !data.items) return;
 
-                const doc = new DOMParser().parseFromString(html, 'text/html');
-                const sourceName = u.toUpperCase();
-                let newItemsFound = false;
+            const sourceName = u.toUpperCase();
+            let newItemsFound = false;
 
-                doc.querySelectorAll('.tgme_widget_message').forEach(msg => {
-                    const textEl = msg.querySelector('.tgme_widget_message_text');
-                    const dateEl = msg.querySelector('time.time');
-                    if(textEl && dateEl) {
-                        let text = textEl.innerText.replace(/[\n\r]+/g, ' - ').replace(/(<([^>]+)>)/gi, "").replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '').trim();
-                        let lowerText = text.toLowerCase();
-                        
-                        let isRelevantNews = false;
-                        if (lowerText.includes('israel') || lowerText.includes('iran') || lowerText.includes('idf') || lowerText.includes('irgc') || lowerText.includes('hezbollah')) {
-                                isRelevantNews = true;
-                        }
+            data.items.forEach(item => {
+                let rawText = item.description.replace(/<[^>]*>?/gm, '');
+                let text = rawText.replace(/[\n\r]+/g, ' - ').replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '').trim();
+                let lowerText = text.toLowerCase();
+                
+                if (blockedKeywords.some(word => lowerText.includes(word))) return;
+                
+                let isRelevantNews = false;
+                if (lowerText.includes('israel') || lowerText.includes('iran') || lowerText.includes('idf') || lowerText.includes('irgc') || lowerText.includes('hezbollah')) {
+                        isRelevantNews = true;
+                }
 
-                        let matchedLat = null, matchedLng = null, matchedLoc = null, evtType = 'missile';
-                        for (const [key, geoData] of Object.entries(geoDB)) {
-                            if (geoData.aliases.some(a => lowerText.includes(a))) {
-                                let jittered = getJitteredCoords(geoData.coords[1], geoData.coords[0]);
-                                matchedLat = jittered.lat; matchedLng = jittered.lng; matchedLoc = key.toUpperCase();
-                                if(lowerText.includes('siren')) evtType = 'siren';
-                                else if(lowerText.includes('drone')) evtType = 'drone';
-                                else if(lowerText.includes('intercept')) evtType = 'intercept';
-                                isRelevantNews = true;
-                                break;
-                            }
-                        }
-                        
-                        if (!isRelevantNews) return;
-
-                        let mediaHTML = '';
-                        const photoWrap = msg.querySelector('.tgme_widget_message_photo_wrap');
-                        if (photoWrap && photoWrap.style.backgroundImage) {
-                            const urlMatch = photoWrap.style.backgroundImage.match(/url\(['"]?(.*?)['"]?\)/);
-                            if (urlMatch && urlMatch[1]) {
-                                mediaHTML = `<img src="${urlMatch[1]}" loading="lazy" style="width:100%; display:block; border-radius:6px; max-height:180px; object-fit:contain; border: 1px solid rgba(255,255,255,0.1);" />`;
-                            }
-                        }
-                        const videoWrap = msg.querySelector('video');
-                        if (videoWrap && videoWrap.src) {
-                            // FIX: Preload set to 'none'. Bandwidth usage is ZERO until user clicks play.
-                            mediaHTML = `
-                            <div style="position:relative; width:100%; border-radius:6px; overflow:hidden; border: 1px solid rgba(255,255,255,0.1); background:#050505; margin-top:8px;">
-                                <video preload="none" src="${videoWrap.src}" playsinline style="width:100%; display:block; max-height:180px; object-fit:contain; cursor:pointer;" onclick="toggleNativeVideo(this)"></video>
-                                <div class="vid-play-btn" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:rgba(48,209,88,0.8); border-radius:50%; width:40px; height:40px; display:flex; justify-content:center; align-items:center; pointer-events:none;">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                                </div>
-                            </div>`;
-                        }
-
-                        let ts = new Date(dateEl.getAttribute('datetime')).getTime();
-                        const uniqueId = sourceName.replace(/[^a-zA-Z0-9]/g, '') + '_' + ts;
-
-                        const newNewsObj = { 
-                            id: uniqueId,
-                            channel: sourceName, text: text, date: ts, 
-                            mediaHTML: mediaHTML,
-                            lat: matchedLat, lng: matchedLng, location: matchedLoc, eventType: evtType
-                        };
-
-                        if(!allNewsData.some(d => d.id === uniqueId)) {
-                            allNewsData.push(newNewsObj);
-                            newItemsFound = true;
-                        }
+                let matchedLat = null, matchedLng = null, matchedLoc = null, evtType = 'missile';
+                for (const [key, geoData] of Object.entries(geoDB)) {
+                    if (geoData.aliases.some(a => lowerText.includes(a))) {
+                        let jittered = getJitteredCoords(geoData.coords[1], geoData.coords[0]);
+                        matchedLat = jittered.lat; matchedLng = jittered.lng; matchedLoc = key.toUpperCase();
+                        if(lowerText.includes('siren')) evtType = 'siren';
+                        else if(lowerText.includes('drone')) evtType = 'drone';
+                        else if(lowerText.includes('intercept')) evtType = 'intercept';
+                        isRelevantNews = true;
+                        break;
                     }
-                });
+                }
+                
+                if (!isRelevantNews) return;
 
-                if(newItemsFound) { debouncedRenderNews(); }
+                let mediaHTML = '';
+                if (item.enclosure && item.enclosure.link) {
+                    if (item.enclosure.type.includes('image')) {
+                        mediaHTML = `<img src="${item.enclosure.link}" loading="lazy" style="width:100%; display:block; border-radius:6px; max-height:180px; object-fit:contain; border: 1px solid rgba(255,255,255,0.1);" />`;
+                    } else if (item.enclosure.type.includes('video')) {
+                        mediaHTML = `
+                        <div style="position:relative; width:100%; border-radius:6px; overflow:hidden; border: 1px solid rgba(255,255,255,0.1); background:#050505; margin-top:8px;">
+                            <video preload="none" src="${item.enclosure.link}" playsinline style="width:100%; display:block; max-height:180px; object-fit:contain; cursor:pointer;" onclick="toggleNativeVideo(this)"></video>
+                            <div class="vid-play-btn" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:rgba(48,209,88,0.8); border-radius:50%; width:40px; height:40px; display:flex; justify-content:center; align-items:center; pointer-events:none;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                            </div>
+                        </div>`;
+                    }
+                }
 
-            } catch (e) {}
-        }, index * 800); // FIX: 800ms stagger prevents proxy blocking and allows UI to stay responsive
-    });
-}
+                let ts = new Date(item.pubDate.replace(/-/g, '/')).getTime();
+                if(isNaN(ts)) ts = Date.now();
+                const uniqueId = sourceName.replace(/[^a-zA-Z0-9]/g, '') + '_' + ts;
+
+                const newNewsObj = { 
+                    id: uniqueId,
+                    channel: sourceName, text: text, date: ts, 
+                    mediaHTML: mediaHTML,
+                    lat: matchedLat, lng: matchedLng, location: matchedLoc, eventType: evtType
+                };
+
+                if(!allNewsData.some(d => d.id === uniqueId)) {
+                    allNewsData.push(newNewsObj);
+                    newItemsFound = true;
+                }
+            });
+
+            if(newItemsFound) { debouncedRenderNews(); }
+        }, delay);
+        delay += 400; // 400ms stagger between channel fetches
+    }
+};
 
 window.renderNewsFeeds = function() {
     const nowMs = Date.now();
