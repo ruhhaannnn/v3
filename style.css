@@ -260,3 +260,28 @@ body {
     .mac-dock { width: 85%; padding: 6px 12px; gap: 10px;}
     .mac-dock .nav-item { width: 35px; height: 35px; }
 }
+
+/* ==========================================
+   GLOBAL UI ALERTS (6-SECOND FLASH)
+   ========================================== */
+@keyframes flash-missile { 
+    0%, 100% { box-shadow: 0 0 0 transparent; border-color: var(--glass-border); } 
+    50% { box-shadow: 0 0 30px #ff3b30, inset 0 0 20px #ff3b30; border-color: #ff3b30; } 
+}
+@keyframes flash-siren { 
+    0%, 100% { box-shadow: 0 0 0 transparent; border-color: var(--glass-border); } 
+    50% { box-shadow: 0 0 30px #0a84ff, inset 0 0 20px #0a84ff; border-color: #0a84ff; } 
+}
+@keyframes flash-drone { 
+    0%, 100% { box-shadow: 0 0 0 transparent; border-color: var(--glass-border); } 
+    50% { box-shadow: 0 0 30px #ff9f0a, inset 0 0 20px #ff9f0a; border-color: #ff9f0a; } 
+}
+@keyframes flash-intercept { 
+    0%, 100% { box-shadow: 0 0 0 transparent; border-color: var(--glass-border); } 
+    50% { box-shadow: 0 0 30px #98989d, inset 0 0 20px #98989d; border-color: #98989d; } 
+}
+
+.alert-missile { animation: flash-missile 1.5s ease-in-out infinite !important; }
+.alert-siren { animation: flash-siren 1.5s ease-in-out infinite !important; }
+.alert-drone { animation: flash-drone 1.5s ease-in-out infinite !important; }
+.alert-intercept { animation: flash-intercept 1.5s ease-in-out infinite !important; }
