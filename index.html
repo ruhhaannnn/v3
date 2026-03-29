@@ -3,19 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>IQWR | ISMU QOILA WAR ROOM</title>
+    <title>IQWR | ISRAEL-US IRAN WAR ROOM</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@700&display=swap" rel="stylesheet">
-    <link href="https://unpkg.com/maplibre-gl@3.3.1/dist/maplibre-gl.css" rel="stylesheet" />
-    <link rel="stylesheet" href="style.css" />
+    <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@400;600;700&family=League+Spartan:wght@700&display=swap" rel="stylesheet">
     
+    <link href="https://unpkg.com/maplibre-gl@3.3.1/dist/maplibre-gl.css" rel="stylesheet" />
     <script src="https://unpkg.com/maplibre-gl@3.3.1/dist/maplibre-gl.js"></script>
+
+    <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-    <nav class="bottom-nav" id="main-nav">
+    <div class="dashboard-pull-up" id="dash-arrow" onclick="toggleMapSheet()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+    </div>
+
+    <nav class="mac-dock" id="main-nav">
         <a onclick="switchTab('map-section', this)" class="nav-item active-nav" title="Map">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon><line x1="9" y1="3" x2="9" y2="18"></line><line x1="15" y1="6" x2="15" y2="21"></line></svg>
         </a>
@@ -29,178 +34,241 @@
         <a onclick="switchTab('stats-section', this)" class="nav-item" title="Stats">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
         </a>
-        <a onclick="switchTab('airspace-section', this)" class="nav-item" title="Airspace">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-.5-.5-2.5 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.2-1.1.6L3 8l6.5 4.5L6 16l-2.5-1-1.5 1 2.5 4 4 2.5 1-1.5-1-2.5 3.5-3.5 8 6.5.5-1.5-.2-1z"></path></svg>
-        </a>
     </nav>
 
-    <header>
-        <div style="display: flex; align-items: center; gap: 15px;">
-            <span class="pulse"></span>
-            <span style="font-size: 0.85rem; color: var(--normal); font-family: var(--font-mono); font-weight: bold;" id="clock">Syncing Time...</span>
-        </div>
-        <div style="display: flex; flex-direction: column; align-items: flex-end;">
-            <h1 style="margin: 0; line-height: 1; font-family: 'League Spartan', sans-serif;">IQWR</h1>
-            <span style="font-size: 0.6rem; color: var(--text-muted); font-family: var(--font-mono); text-transform: uppercase; margin-top: 2px;">(Ismu Qoila War Room)</span>
-        </div>
-    </header>
+    <div class="top-sticky-zone">
+        <div class="main-outer-pill" id="header-pill">
+            <div class="header-view-default" id="header-view-1">
+                <div class="h-left">
+                    <span class="pulse"></span>
+                    <span id="clock" class="h-date">SYNCING...</span>
+                </div>
+                <div class="h-center">
+                    <div class="title-stack">
+                        <h1>IQWR</h1>
+                        <span>WAR ROOM</span>
+                    </div>
+                </div>
+                <div class="h-right">
+                    <button class="hamburger-btn" onclick="toggleHeader()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                    </button>
+                </div>
+            </div>
 
-    <div class="ticker-wrap">
-        <div class="ticker-move" id="live-ticker">
-            <span class="ticker-item">🚨 ESTABLISHING SECURE DATALINK... KINETIC SYSTEMS ONLINE...</span>
+            <div class="header-view-expanded" id="header-view-2">
+                <div class="h-left">
+                    <span class="pulse"></span>
+                </div>
+                <div class="h-center options-stack">
+                    <a href="about.html" class="btn-green">About</a>
+                    <a href="support.html" class="btn-green">Support</a>
+                </div>
+                <div class="h-right">
+                    <button class="close-btn-red" onclick="toggleHeader()">✕</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="ticker-wrap glass-ticker" id="ticker-container" style="opacity: 0;">
+            <div class="ticker-move" id="live-ticker"></div>
         </div>
     </div>
 
     <div id="map-section" class="tab-content active-tab map-wrapper">
         <div id="map"></div>
-        <div class="map-panel">
-            <div class="header">
-                <div class="header-title">
-                    <span>COMBAT THEATER MONITOR</span>
-                    <span class="live-indicator">
-                        <div style="width: 6px; height: 6px; background: #10b981; border-radius: 50%;"></div> 
-                        POLL IN: <span id="timer-display" style="font-weight:bold; margin-left:4px;">10:00</span>
-                    </span>
-                </div>
-                <div class="legend">
-                    <div class="legend-item"><div class="l-box l-red"></div> MISSILE</div>
-                    <div class="legend-item"><div class="l-box l-blue"></div> SIREN</div>
-                    <div class="legend-item"><div class="l-box l-orange"></div> DRONE</div>
-                    <div class="legend-item"><div class="l-box l-grey"></div> INTERCEPT</div>
-                </div>
-            </div>
-            
-            <div class="time-filters">
-                <button class="filter-btn" onclick="setFilter(24)" id="btn-24">24H</button>
-                <button class="filter-btn active" onclick="setFilter(999999)" id="btn-999999">ALL TIME</button>
-            </div>
+        
+        <div id="custom-popup" class="glass-popup hidden">
+            <button class="close-popup" onclick="closePopupAndOpenSheet()">×</button>
+            <div id="custom-popup-content"></div>
+        </div>
 
-            <div class="region-filters" style="padding: 0 8px 8px 8px; border-bottom: 1px solid var(--border-color); background: rgba(0,0,0,0.2);">
-                <select id="region-filter" onchange="setRegionFilter(this.value)" class="region-select">
-                    <option value="ALL">ALL REGIONS</option>
-                    <option value="IRAN">IRAN</option>
-                    <option value="ISRAEL">ISRAEL</option>
-                    <option value="LEBANON">LEBANON</option>
-                    <option value="SYRIA">SYRIA</option>
-                    <option value="IRAQ">IRAQ</option>
-                    <option value="YEMEN">YEMEN</option>
-                    <option value="UAE">DUBAI / UAE</option>
-                    <option value="QATAR">QATAR</option>
-                    <option value="OMAN">OMAN</option>
-                    <option value="BAHRAIN">BAHRAIN</option>
-                    <option value="SAUDI ARABIA">SAUDI ARABIA</option>
-                </select>
+        <div class="map-panel" id="map-bottom-sheet">
+            <div class="drag-handle-container" onclick="toggleMapSheet()">
+                <div class="drag-handle"></div>
+                <span class="drag-label">TACTICAL FEED</span>
             </div>
-
-            <div class="feed-container" id="feed">
-                <div style="text-align: center; color: #888; margin-top: 20px;">Fetching Tactical Baseline...</div>
+            <div class="sheet-content">
+                <div class="header" style="background: transparent; border-bottom: 1px solid var(--glass-border);">
+                    <div class="legend" style="padding: 10px 15px;">
+                        <div class="legend-item"><div class="l-box l-red"></div> MISSILE</div>
+                        <div class="legend-item"><div class="l-box l-blue"></div> SIREN</div>
+                        <div class="legend-item"><div class="l-box l-orange"></div> DRONE</div>
+                        <div class="legend-item"><div class="l-box l-grey"></div> INTERCEPT</div>
+                    </div>
+                </div>
+                <div class="time-filters">
+                    <button class="glass-btn refresh-btn" onclick="forceRefresh()">↻ REFRESH</button>
+                    <button class="filter-btn active" onclick="setFilter(24)" id="btn-24">24H</button>
+                    <button class="filter-btn" onclick="setFilter(999999)" id="btn-999999">ALL TIME</button>
+                </div>
+                <div class="feed-container" id="feed"></div>
             </div>
         </div>
     </div>
 
-    <div id="news-section" class="tab-content hidden-tab dashboard">
+    <div id="news-section" class="tab-content hidden-tab stacked-dashboard">
         <div class="panel">
-            <div class="panel-header">
-                <div style="display:flex; align-items:center;"><div class="live-dot-green"></div>Summary This Hour</div>
-            </div>
-            <div class="panel-content">
-                <ul class="summary-list" id="summary-feed"><li>Loading instant cache...</li></ul>
-            </div>
+            <div class="panel-header"><div style="display:flex; align-items:center;"><div class="live-dot-green"></div>Summary This Hour</div></div>
+            <div class="panel-content"><div id="summary-feed" class="skel-list"></div></div>
         </div>
-        <div class="panel panel-tall">
-            <div class="panel-header">
-                <div style="display:flex; align-items:center;"><div class="live-dot-green"></div>Latest News</div>
-                <span>(16 Hours)</span>
-            </div>
-            <div class="panel-content" id="news-feed"><div style="padding: 20px; text-align: center;">Loading instant cache...</div></div>
+        <div class="panel">
+            <div class="panel-header"><div style="display:flex; align-items:center;"><div class="live-dot-green"></div>Latest News</div><span>(Filtered Intel)</span></div>
+            <div class="panel-content"><div id="news-feed" class="skel-list"></div></div>
         </div>
-        <div class="panel panel-tall">
-            <div class="panel-header">
-                <div style="display:flex; align-items:center;"><div class="live-dot-green"></div>Iran News</div>
-                <span>Press TV (16 Hours)</span>
-            </div>
-            <div class="panel-content" id="iran-news-feed"><div style="padding: 20px; text-align: center;">Loading instant cache...</div></div>
+        <div class="panel">
+            <div class="panel-header"><div style="display:flex; align-items:center;"><div class="live-dot-green"></div>Iran News</div><span>Press TV</span></div>
+            <div class="panel-content"><div id="iran-news-feed" class="skel-list"></div></div>
         </div>
+        <div class="panel">
+            <div class="panel-header"><div style="display:flex; align-items:center;"><div class="live-dot-green"></div>Israel News</div><span>Intl Sources</span></div>
+            <div class="panel-content"><div id="israel-news-feed" class="skel-list"></div></div>
+        </div>
+        
+        <div class="scroll-runway"></div> 
     </div>
 
-    <div id="live-section" class="tab-content hidden-tab dashboard">
-        <div class="panel panel-wide panel-tall">
-            <div class="panel-header">Al Jazeera English <span>Live Network</span></div>
-            <div class="panel-content" style="background: #000; position: relative;">
-                <iframe src="https://www.youtube.com/embed/live_stream?channel=UCNye-wNBqNL5ZzHSJj3l8Bg&autoplay=1&mute=1&playsinline=1" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen style="position:absolute; top:0; left:0; width:100%; height:100%; border:none;"></iframe>
+    <div id="live-section" class="tab-content hidden-tab stacked-dashboard">
+        <div class="panel">
+            <div class="panel-header">Al Jazeera English 
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <button class="custom-play-btn" onclick="toggleIframePlay(this, 'iframe-aljazeera')">[ PAUSE ]</button>
+                    <div class="live-pill"><span class="live-blink"></span>LIVE</div>
+                </div>
+            </div>
+            <div class="panel-content live-cam-wrapper">
+                <iframe id="iframe-aljazeera" src="https://www.youtube.com/embed/live_stream?channel=UCNye-wNBqNL5ZzHSJj3l8Bg&autoplay=1&mute=1&playsinline=1&enablejsapi=1" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen style="position:absolute; top:0; left:0; width:100%; height:100%; border:none;"></iframe>
             </div>
         </div>
-        <div class="panel panel-tall">
-            <div class="panel-header">Live Cam - Tel Aviv <span>Israel Feed</span></div>
-            <div class="panel-content" style="background: #000; position: relative;">
-                <iframe src="https://www.youtube.com/embed/4E-iFtUM2kk?autoplay=1&mute=1&playsinline=1&controls=0&disablekb=1" allow="autoplay; encrypted-media; picture-in-picture" style="position:absolute; top:0; left:0; width:100%; height:100%; border:none; pointer-events: none;"></iframe>
-                <button onclick="toggleFullscreen(this)" class="custom-fs-btn" title="Fullscreen">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
-                </button>
+        <div class="panel">
+            <div class="panel-header">Live Cam - Israel Feed 
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <button class="custom-play-btn" onclick="toggleIframePlay(this, 'iframe-telaviv')">[ PAUSE ]</button>
+                    <div class="live-pill"><span class="live-blink"></span>LIVE</div>
+                </div>
+            </div>
+            <div class="panel-content live-cam-wrapper" id="tel-aviv-cam">
+                <div class="glass-shield"></div>
+                <iframe id="iframe-telaviv" src="https://www.youtube.com/embed/VehGieRi72w?autoplay=1&mute=1&playsinline=1&controls=0&enablejsapi=1" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen style="position:absolute; top:0; left:0; width:100%; height:100%; border:none; pointer-events: none;"></iframe>
+                <button class="custom-fs-btn" onclick="toggleFullScreen(document.getElementById('tel-aviv-cam'))">[ FULLSCREEN ]</button>
             </div>
         </div>
-        <div class="panel panel-tall">
-            <div class="panel-header">Live Cam - Lebanon <span>Beirut Feed</span></div>
-            <div class="panel-content" style="background: #000; position: relative;">
-                <iframe src="https://www.youtube.com/embed/gmtlJ_m2r5A?autoplay=1&mute=1&playsinline=1&controls=0&disablekb=1" allow="autoplay; encrypted-media; picture-in-picture" style="position:absolute; top:0; left:0; width:100%; height:100%; border:none; pointer-events: none;"></iframe>
-                <button onclick="toggleFullscreen(this)" class="custom-fs-btn" title="Fullscreen">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
-                </button>
+        <div class="panel">
+            <div class="panel-header">Live Cam - Lebanon 
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <button class="custom-play-btn" onclick="toggleIframePlay(this, 'iframe-beirut')">[ PAUSE ]</button>
+                    <div class="live-pill"><span class="live-blink"></span>LIVE</div>
+                </div>
+            </div>
+            <div class="panel-content live-cam-wrapper" id="beirut-cam">
+                <div class="glass-shield"></div>
+                <iframe id="iframe-beirut" src="https://www.youtube.com/embed/gmtlJ_m2r5A?autoplay=1&mute=1&playsinline=1&controls=0&enablejsapi=1" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen style="position:absolute; top:0; left:0; width:100%; height:100%; border:none; pointer-events: none;"></iframe>
+                <button class="custom-fs-btn" onclick="toggleFullScreen(document.getElementById('beirut-cam'))">[ FULLSCREEN ]</button>
             </div>
         </div>
+
+        <div class="scroll-runway"></div> 
     </div>
 
-    <div id="stats-section" class="tab-content hidden-tab dashboard">
-        <div class="panel panel-wide panel-tall"style="min-height: 650px;">
-            <div class="panel-header">Macro Markets <span>Global Assets (Real-Time)</span></div>
-            <div class="panel-content">
-                <div class="tradingview-widget-container" style="height: 100%; width: 100%;">
+    <div id="stats-section" class="tab-content hidden-tab stacked-dashboard">
+        <div class="panel wallet-override-panel">
+            <div class="wallet-container">
+                <div class="app-container">
+                  <div class="wallet">
+                    <div class="wallet-back"></div>
+                    <div class="card stripe" style="background: #003087;">
+                      <div class="card-inner">
+                        <div class="card-top"><span>🇺🇸 UNITED STATES</span></div>
+                        <div class="card-bottom">
+                          <div class="card-info"><span class="label">Status</span><span class="value">ACTIVE SPT</span></div>
+                          <div class="card-number-wrapper">
+                            <span class="hidden-stars">EXP: HIGH</span>
+                            <span class="card-number" id="burn-us">$0</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="card wise" style="background: #1a5b9e;">
+                      <div class="card-inner">
+                        <div class="card-top"><span>🇮🇱 ISRAEL (IDF)</span></div>
+                        <div class="card-bottom">
+                          <div class="card-info"><span class="label">Status</span><span class="value">ENGAGED</span></div>
+                          <div class="card-number-wrapper">
+                            <span class="hidden-stars">EXP: CRIT</span>
+                            <span class="card-number" id="burn-il">$0</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="card paypal" style="background: #9e1a1a; color: white;">
+                      <div class="card-inner">
+                        <div class="card-top"><span>🇮🇷 IRAN (IRGC)</span></div>
+                        <div class="card-bottom">
+                          <div class="card-info"><span class="label">Status</span><span class="value" style="color:#ffcccc">MOBILIZED</span></div>
+                          <div class="card-number-wrapper">
+                            <span class="hidden-stars">EXP: SEV</span>
+                            <span class="card-number" id="burn-ir" style="color:white">$0</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="pocket">
+                      <svg class="pocket-svg" viewBox="0 0 280 160" fill="none">
+                        <path d="M 0 20 C 0 10, 5 10, 10 10 C 20 10, 25 25, 40 25 L 240 25 C 255 25, 260 10, 270 10 C 275 10, 280 10, 280 20 L 280 120 C 280 155, 260 160, 240 160 L 40 160 C 20 160, 0 155, 0 120 Z" fill="#152415"></path>
+                        <path d="M 8 22 C 8 16, 12 16, 15 16 C 23 16, 27 29, 40 29 L 240 29 C 253 29, 257 16, 265 16 C 268 16, 272 16, 272 22 L 272 120 C 272 150, 255 152, 240 152 L 40 152 C 25 152, 8 152, 8 120 Z" stroke="#3d5635" stroke-width="1.5" stroke-dasharray="6 4"></path>
+                      </svg>
+                      <div class="pocket-content">
+                        <div style="position: relative; height: 24px; width: 100%;">
+                          <div class="balance-stars">EST. BURN</div>
+                          <div class="balance-real" id="burn-total">$0</div>
+                        </div>
+                        <div style="color: #698263; font-size: 11px; font-weight: 500; text-transform: uppercase;">Open Source Est.</div>
+                        <div class="eye-icon-wrapper">
+                          <svg class="eye-icon eye-slash" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle><line x1="3" y1="3" x2="21" y2="21"></line></svg>
+                          <svg class="eye-icon eye-open" style="opacity: 0;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div> 
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">Macro Markets <span>Global Assets</span></div>
+            <div class="panel-content" style="position: relative;">
+                <div class="tradingview-widget-container" style="height: 100%; width: 100%; position: relative; z-index: 2;">
                     <div class="tradingview-widget-container__widget" style="height:calc(100% - 32px); width:100%;"></div>
                     <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-market-overview.js" async>
-                    {
-                    "colorTheme": "dark", "dateRange": "1D", "showChart": true, "locale": "en",
-                    "isTransparent": true, "showSymbolLogo": true, "width": "100%", "height": "100%",
-                    "tabs": [{ "title": "Global Assets", "symbols": [
-                        { "s": "BITSTAMP:BTCUSD", "d": "Bitcoin (USD)" },
-                        { "s": "TVC:USOIL", "d": "WTI Crude Oil (USD)" },
-                        { "s": "TVC:GOLD", "d": "Gold (USD)" },
-                        { "s": "FOREXCOM:SPXUSD", "d": "S&P 500 (USD)" }
-                    ]}] }
+                    { "colorTheme": "dark", "dateRange": "1D", "showChart": true, "locale": "en", "isTransparent": true, "showSymbolLogo": true, "width": "100%", "height": "100%", "tabs": [{ "title": "Global Assets", "symbols": [ { "s": "BITSTAMP:BTCUSD", "d": "Bitcoin (USD)" }, { "s": "TVC:USOIL", "d": "WTI Crude Oil (USD)" }, { "s": "TVC:GOLD", "d": "Gold (USD)" } ]}] }
                     </script>
                 </div>
             </div>
         </div>
-        <div class="panel panel-tall">
-            <div class="panel-header">Live Maritime AIS <span>Strait of Hormuz (60s Sync)</span></div>
-            <div class="panel-content">
-                <iframe class="auto-refresh-iframe" src="https://www.marinetraffic.com/en/ais/embed/zoom:8/centery:26.7/centerx:56.2/maptype:4/shownames:false/mmsi:0/shipid:0/fleet:/fleet_id:/vtypes:/showmenu:false/remember:false" style="position:absolute; top:0; left:0; width:100%; height:100%; border:none;"></iframe>
+        
+        <div class="panel">
+            <div class="panel-header">Live Maritime Radar <span>Gulf Sector</span></div>
+            <div class="panel-content" style="position: relative; overflow: hidden; background: #000;">
+                <iframe src="https://www.marinetraffic.com/en/ais/embed/zoom:5/centery:25.0/centerx:55.0/maptype:3/shownames:false/mmsi:0/shipid:0/fleet:/fleet_id:/vtypes:/showmenu:false/remember:false" style="position:absolute; top:-10px; left:-10px; width:calc(100% + 20px); height:calc(100% + 20px); border:none;"></iframe>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">Live Flight Radar <span>Gulf Sector</span></div>
+            <div class="panel-content" style="position: relative; overflow: hidden; background: #000;">
+                <iframe src="https://globe.adsbexchange.com/?lat=24.5&lon=53.5&zoom=6&hideSidebar=1&hideButtons=1" style="position:absolute; top:-30px; left:-30px; width:calc(100% + 60px); height:calc(100% + 60px); border:none;"></iframe>
             </div>
         </div>
         <div class="panel">
-            <div class="panel-header">Traffic By Region <span>Internal Nodes (60s Sync)</span></div>
+            <div class="panel-header">Traffic By Region <span>Internal Nodes</span></div>
             <div class="panel-content">
                 <iframe class="auto-refresh-iframe" src="https://radar.cloudflare.com/embed/TrafficVolumeByRegionXY?dateRange=1d&location=ir&metric=HTTP_REQUESTS&theme=dark" style="position:absolute; top:0; left:0; width:100%; height:100%; border:none;"></iframe>
             </div>
         </div>
-        <div class="panel">
-            <div class="panel-header">Device Connectivity <span>Mobile vs Desktop (60s Sync)</span></div>
-            <div class="panel-content">
-                <iframe class="auto-refresh-iframe" src="https://radar.cloudflare.com/embed/MobileDesktopStackedBar?dateRange=1d&location=ir&theme=dark" style="position:absolute; top:0; left:0; width:100%; height:100%; border:none;"></iframe>
-            </div>
-        </div>
+
+        <div class="scroll-runway"></div> 
     </div>
 
-    <div id="airspace-section" class="tab-content hidden-tab dashboard">
-        <div class="panel panel-full" style="grid-row: span 2;">
-            <div class="panel-header">Regional Airspace Status <span>Live Monitoring</span></div>
-            <div class="panel-content" style="padding: 24px;">
-                <div id="airspace-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
-                    <div style="text-align: center; color: #888; width: 100%;">Scanning global aviation feeds...</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script src="script.js"></script>
+    <script type="module" src="script.js"></script>
 </body>
 </html>
