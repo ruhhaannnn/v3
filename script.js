@@ -28,8 +28,8 @@ const map = new maplibregl.Map({
         "sources": { "carto-dark": { "type": "raster", "tiles": ["https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"], "tileSize": 256 } },
         "layers": [{"id": "carto-dark-layer", "type": "raster", "source": "carto-dark", "minzoom": 0, "maxzoom": 22}]
     },
-    center: [44.0, 29.0], // Centers on the Middle East
-    zoom: 3.5, // Zooms out to show Egypt, Israel, Gulf, and Iran
+    center: [44.0, 29.0], 
+    zoom: 3.5, 
     pitch: 40, 
     bearing: 0,
     interactive: false 
@@ -82,6 +82,7 @@ function enforceStackingRunways() {
 window.forceRefresh = function() {
     const refreshBtn = document.querySelector('.refresh-btn');
     const originalText = refreshBtn.innerHTML;
+    
     refreshBtn.innerHTML = '↻ SYNCING...';
     refreshBtn.style.opacity = '0.5';
     
@@ -103,26 +104,6 @@ window.toggleIframePlay = function(btn, iframeId) {
         "args": []
     }), '*');
     btn.innerText = isPlaying ? '[ PLAY ]' : '[ PAUSE ]';
-};
-
-// Native HTML5 Video Player Toggle
-window.toggleNativeVideo = function(vid) {
-    document.querySelectorAll('video').forEach(v => {
-        if (v !== vid) { 
-            v.pause(); 
-            if(v.nextElementSibling) v.nextElementSibling.style.display = 'flex'; 
-        }
-    });
-    
-    const btnOverlay = vid.nextElementSibling;
-    if (vid.paused) {
-        vid.play();
-        vid.muted = false; 
-        if(btnOverlay) btnOverlay.style.display = 'none';
-    } else {
-        vid.pause();
-        if(btnOverlay) btnOverlay.style.display = 'flex';
-    }
 };
 
 window.toggleMapSheet = () => document.getElementById('map-bottom-sheet').classList.toggle('open');
@@ -151,12 +132,8 @@ window.toggleFullScreen = function(elem) {
 };
 
 window.switchTab = function(tabId, el) {
-    document.querySelectorAll('video').forEach(vid => {
-        vid.pause();
-        vid.muted = true;
-        if(vid.nextElementSibling) vid.nextElementSibling.style.display = 'flex';
-    });
-    
+    // Pause media when navigating away
+    document.querySelectorAll('video').forEach(vid => vid.pause());
     document.querySelectorAll('.live-cam-wrapper iframe').forEach(iframe => {
         iframe.contentWindow.postMessage(JSON.stringify({ "event": "command", "func": "pauseVideo", "args": [] }), '*');
     });
@@ -184,6 +161,15 @@ window.switchTab = function(tabId, el) {
         void target.offsetWidth; 
         target.classList.add('active-tab');
         if(tabId === 'map-section') { map.resize(); }
+        
+        // AUTOPLAY: Trigger Live Streams immediately upon entering the Live Tab
+        if (tabId === 'live-section') {
+            document.querySelectorAll('.live-cam-wrapper iframe').forEach(iframe => {
+                iframe.contentWindow.postMessage(JSON.stringify({ "event": "command", "func": "playVideo", "args": [] }), '*');
+            });
+            document.querySelectorAll('.custom-play-btn').forEach(btn => btn.innerText = '[ PAUSE ]');
+        }
+
     }, 300);
     
     document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active-nav'));
@@ -509,6 +495,7 @@ const historicalRawData = [
   {"id":"mar24_nat_01","title":"Bunker Buster Munitions Deployed Against Natanz Outer Defense Perimeter","location":"NATANZ, IRAN","lat":33.7258,"lng":51.7286,"eventType":"missile","timestamp":1774339200000,"source":"ISW"}
 ];
 
+
 let baselineMapData = [];
 let baselineNewsData = [];
 
@@ -516,11 +503,9 @@ historicalRawData.forEach(item => {
     let safeMedia = item.mediaHTML || "";
     if (item.videoSrc && !item.videoSrc.includes("PASTE_YOUR")) {
         safeMedia = `
-        <div style="position:relative; width:100%; border-radius:6px; overflow:hidden; border: 1px solid rgba(255,255,255,0.1); background:#050505; margin-top:8px;">
-            <video preload="none" src="${item.videoSrc}" playsinline style="width:100%; display:block; max-height:180px; object-fit:contain; cursor:pointer;" onclick="toggleNativeVideo(this)"></video>
-            <div class="vid-play-btn" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:rgba(48,209,88,0.8); border-radius:50%; width:40px; height:40px; display:flex; justify-content:center; align-items:center; pointer-events:none;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-            </div>
+        <div style="position:relative; width:100%; border-radius:6px; overflow:hidden; border: 1px solid rgba(255,255,255,0.1); background:#000; margin-top:8px;">
+            <video src="${item.videoSrc}" autoplay loop muted playsinline onclick="this.muted=!this.muted; this.nextElementSibling.innerText = this.muted ? '🔇 TAP TO UNMUTE' : '🔊 MUTE'" style="width:100%; display:block; max-height:180px; object-fit:contain; cursor:pointer;"></video>
+            <div style="position:absolute; bottom:6px; right:6px; background:rgba(0,0,0,0.8); color:#fff; font-size:0.6rem; font-weight:bold; padding:4px 8px; border-radius:4px; pointer-events:none;">🔇 TAP TO UNMUTE</div>
         </div>`;
     }
 
@@ -583,11 +568,31 @@ const geoDB = {
 };
 
 const tacticalSources = ['AMK_Mapping', 'rnintel', 'DDGeopolitics', 'clashreport'];
-const newsSources = ['AMK_Mapping', 'rnintel', 'DDGeopolitics', 'clashreport', 'presstv', 'me_observer_TG', 'spectatorindex', 'aljazeeraenglish', 'ILtoday'];
+const newsSources = ['presstv', 'me_observer_TG'];
 
-// ==========================================
-// 5. FIREBASE REALTIME LISTENERS (MAP ONLY)
-// ==========================================
+async function fetchWithFastestProxy(targetUrl, type = 'json') {
+    const separator = targetUrl.includes('?') ? '&' : '?';
+    const brokenCacheUrl = `${targetUrl}${separator}nocache=${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    const encoded = encodeURIComponent(brokenCacheUrl);
+    
+    const proxies = [
+        `https://corsproxy.io/?url=${encoded}`,
+        `https://api.allorigins.win/raw?url=${encoded}`,
+        `https://api.codetabs.com/v1/proxy?quest=${encoded}`
+    ];
+
+    for (let proxy of proxies) {
+        try {
+            const res = await fetch(proxy, { cache: "no-store", mode: 'cors' });
+            if (res.ok) return type === 'json' ? await res.json() : await res.text();
+        } catch(e) {}
+    }
+    return null;
+}
+
+// -------------------------------------------------------------------
+// 5. FIREBASE REALTIME LISTENERS (MAP ONLY) & LOCAL RENDERING
+// -------------------------------------------------------------------
 
 onValue(mapDbRef, (snapshot) => {
     const liveData = snapshot.val() ? Object.values(snapshot.val()) : [];
@@ -603,229 +608,241 @@ onValue(mapDbRef, (snapshot) => {
     renderMapData();
 });
 
-// ==========================================
-// 6. LIGHTWEIGHT RSS-TO-JSON SCRAPER
-// ==========================================
-const blockedKeywords = ['press release', 'statement', 'speech', 'spokesperson', 'condemn', 'condemns', 'says', 'said', 'announced', 'official', 'meeting', 'diplomat', 'minister', 'claims'];
 
-async function fetchTelegramJSON(channel) {
-    const rssUrl = encodeURIComponent(`https://rsshub.app/telegram/channel/${channel}`);
-    const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${rssUrl}&api_key=`; 
-    
-    try {
-        const response = await fetch(apiUrl, { cache: "no-store" });
-        if (response.ok) {
-            return await response.json();
-        }
-    } catch (e) {
-        console.error(`Failed to fetch ${channel}`);
-    }
-    return null;
-}
-
+// -------------------------------------------------------------------
+// 6. SCRAPERS
+// -------------------------------------------------------------------
 window.fetchLiveOSINT = async function() {
-    tacticalSources.forEach(async (source) => {
-        const data = await fetchTelegramJSON(source);
-        if (!data || !data.items) return;
-        
-        const sourceName = source.toUpperCase();
-        
-        data.items.forEach(item => {
-            let rawText = item.description.replace(/<[^>]*>?/gm, '');
-            let text = rawText.replace(/[\n\r]+/g, ' - ').replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '').trim();
-            let lowerText = text.toLowerCase();
-            
-            if (blockedKeywords.some(word => lowerText.includes(word))) return;
-            
-            let evtType = null;
-            if (lowerText.includes('intercept') || lowerText.includes('shot down')) evtType = 'intercept';
-            else if (lowerText.includes('siren') || lowerText.includes('alert')) evtType = 'siren';
-            else if (lowerText.includes('drone') || lowerText.includes('uav')) evtType = 'drone';
-            else if (lowerText.includes('missile') || lowerText.includes('rocket') || lowerText.includes('strike') || lowerText.includes('explosion')) evtType = 'missile';
-            
-            if (evtType) {
-                for (const [key, geoData] of Object.entries(geoDB)) {
-                    if (geoData.aliases.some(a => lowerText.includes(a))) {
+    const blockedKeywords = ['press release', 'statement', 'speech', 'spokesperson', 'condemn', 'condemns', 'says', 'said', 'announced', 'official', 'meeting', 'diplomat', 'minister', 'claims'];
+
+    try {
+        tacticalSources.forEach(async (source) => {
+            const htmlText = await fetchWithFastestProxy(`https://t.me/s/${source}`, 'html');
+            if (htmlText) {
+                const doc = new DOMParser().parseFromString(htmlText, 'text/html');
+                const sourceName = source.toUpperCase();
+                
+                doc.querySelectorAll('.tgme_widget_message').forEach(msg => {
+                    const textEl = msg.querySelector('.tgme_widget_message_text');
+                    const dateEl = msg.querySelector('time.time');
+                    if(textEl && dateEl) {
+                        let text = textEl.innerText.toLowerCase();
                         
-                        let mediaHTML = '';
-                        if (item.enclosure && item.enclosure.link) {
-                            if (item.enclosure.type.includes('image')) {
-                                mediaHTML = `<img src="${item.enclosure.link}" loading="lazy" style="width:100%; display:block; border-radius:6px; max-height:180px; object-fit:contain; border: 1px solid rgba(255,255,255,0.1);" />`;
-                            } else if (item.enclosure.type.includes('video')) {
-                                mediaHTML = `
-                                <div style="position:relative; width:100%; border-radius:6px; overflow:hidden; border: 1px solid rgba(255,255,255,0.1); background:#050505; margin-top:8px;">
-                                    <video preload="none" src="${item.enclosure.link}" playsinline style="width:100%; display:block; max-height:180px; object-fit:contain; cursor:pointer;" onclick="toggleNativeVideo(this)"></video>
-                                    <div class="vid-play-btn" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:rgba(48,209,88,0.8); border-radius:50%; width:40px; height:40px; display:flex; justify-content:center; align-items:center; pointer-events:none;">
-                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                                    </div>
-                                </div>`;
+                        if (blockedKeywords.some(word => text.includes(word))) {
+                            return; 
+                        }
+                        
+                        let evtType = null;
+                        if (text.includes('intercept') || text.includes('shot down')) evtType = 'intercept';
+                        else if (text.includes('siren') || text.includes('alert')) evtType = 'siren';
+                        else if (text.includes('drone') || text.includes('uav')) evtType = 'drone';
+                        else if (text.includes('missile') || text.includes('rocket') || text.includes('strike') || text.includes('explosion')) evtType = 'missile';
+                        
+                        if (evtType) {
+                            for (const [key, geoData] of Object.entries(geoDB)) {
+                                if (geoData.aliases.some(a => text.includes(a))) {
+                                    
+                                    let mediaHTML = '';
+                                    const photoWrap = msg.querySelector('.tgme_widget_message_photo_wrap');
+                                    if (photoWrap && photoWrap.style.backgroundImage) {
+                                        const urlMatch = photoWrap.style.backgroundImage.match(/url\(['"]?(.*?)['"]?\)/);
+                                        if (urlMatch && urlMatch[1]) {
+                                            mediaHTML = `<img src="${urlMatch[1]}" style="width:100%; display:block; border-radius:6px; max-height:180px; object-fit:contain; border: 1px solid rgba(255,255,255,0.1);" />`;
+                                        }
+                                    }
+                                    const videoWrap = msg.querySelector('video');
+                                    if (videoWrap && videoWrap.src) {
+                                        mediaHTML = `
+                                        <div style="position:relative; width:100%; border-radius:6px; overflow:hidden; border: 1px solid rgba(255,255,255,0.1); background:#000;">
+                                            <video src="${videoWrap.src}" autoplay loop muted playsinline onclick="this.muted=!this.muted; this.nextElementSibling.innerText = this.muted ? '🔇 TAP TO UNMUTE' : '🔊 MUTE'" style="width:100%; display:block; max-height:180px; object-fit:contain; cursor:pointer;"></video>
+                                            <div style="position:absolute; bottom:6px; right:6px; background:rgba(0,0,0,0.8); color:#fff; font-size:0.6rem; font-weight:bold; padding:4px 8px; border-radius:4px; pointer-events:none;">🔇 TAP TO UNMUTE</div>
+                                        </div>`;
+                                    }
+
+                                    let jittered = getJitteredCoords(geoData.coords[1], geoData.coords[0]);
+                                    let ts = new Date(dateEl.getAttribute('datetime')).getTime();
+                                    const uniqueId = sourceName.replace(/[^a-zA-Z0-9]/g, '') + '_' + ts;
+
+                                    const newObj = {
+                                        id: uniqueId, title: textEl.innerText, eventType: evtType,
+                                        lat: jittered.lat, lng: jittered.lng, location: key.toUpperCase(), 
+                                        timestamp: ts, source: sourceName, mediaHTML: mediaHTML
+                                    };
+                                    
+                                    if(!globalIntelData.some(d => Math.abs(d.timestamp - newObj.timestamp) < 300000 && d.location === newObj.location)) {
+                                        globalIntelData.push(newObj);
+                                        renderMapData();
+                                        set(ref(db, 'mapEvents/' + uniqueId), newObj);
+                                        triggerGlobalAlert(evtType);
+                                    }
+                                    break;
+                                }
                             }
                         }
-
-                        let jittered = getJitteredCoords(geoData.coords[1], geoData.coords[0]);
-                        // Fix date parsing for cross-browser support
-                        let ts = new Date(item.pubDate.replace(/-/g, '/')).getTime(); 
-                        if(isNaN(ts)) ts = Date.now();
-                        const uniqueId = sourceName.replace(/[^a-zA-Z0-9]/g, '') + '_' + ts;
-
-                        const newObj = {
-                            id: uniqueId, title: text, eventType: evtType,
-                            lat: jittered.lat, lng: jittered.lng, location: key.toUpperCase(), 
-                            timestamp: ts, source: sourceName, mediaHTML: mediaHTML
-                        };
-                        
-                        if(!globalIntelData.some(d => Math.abs(d.timestamp - newObj.timestamp) < 300000 && d.location === newObj.location)) {
-                            globalIntelData.push(newObj);
-                            renderMapData();
-                            set(ref(db, 'mapEvents/' + uniqueId), newObj);
-                            triggerGlobalAlert(evtType);
-                        }
-                        break;
                     }
-                }
+                });
             }
         });
-    });
-};
-
-let renderTimeout;
-window.debouncedRenderNews = function() {
-    clearTimeout(renderTimeout);
-    renderTimeout = setTimeout(() => {
-        renderNewsFeeds();
-    }, 500); 
-};
+    } catch (err) {}
+}
 
 window.loadFeeds = async function() {
-    let delay = 0;
-    
-    // Stagger API calls to prevent rate-limiting and browser choking
-    for (const u of newsSources) {
-        setTimeout(async () => {
-            const data = await fetchTelegramJSON(u);
-            if (!data || !data.items) return;
+    // FILTER 1: Strict noise reduction for text parsing
+    const blockedNewsKeywords = ['press release', 'statement', 'speech', 'spokesperson', 'condemn', 'condemns', 'says', 'said', 'announced', 'official', 'meeting', 'diplomat', 'minister', 'claims'];
 
+    newsSources.forEach(async (u) => {
+        try {
+            const html = await fetchWithFastestProxy(`https://t.me/s/${u}`, 'html');
+            if (!html) return;
+
+            const doc = new DOMParser().parseFromString(html, 'text/html');
             const sourceName = u.toUpperCase();
             let newItemsFound = false;
 
-            data.items.forEach(item => {
-                let rawText = item.description.replace(/<[^>]*>?/gm, '');
-                let text = rawText.replace(/[\n\r]+/g, ' - ').replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '').trim();
-                let lowerText = text.toLowerCase();
-                
-                if (blockedKeywords.some(word => lowerText.includes(word))) return;
-                
-                let isRelevantNews = false;
-                if (lowerText.includes('israel') || lowerText.includes('iran') || lowerText.includes('idf') || lowerText.includes('irgc') || lowerText.includes('hezbollah')) {
-                        isRelevantNews = true;
-                }
-
-                let matchedLat = null, matchedLng = null, matchedLoc = null, evtType = 'missile';
-                for (const [key, geoData] of Object.entries(geoDB)) {
-                    if (geoData.aliases.some(a => lowerText.includes(a))) {
-                        let jittered = getJitteredCoords(geoData.coords[1], geoData.coords[0]);
-                        matchedLat = jittered.lat; matchedLng = jittered.lng; matchedLoc = key.toUpperCase();
-                        if(lowerText.includes('siren')) evtType = 'siren';
-                        else if(lowerText.includes('drone')) evtType = 'drone';
-                        else if(lowerText.includes('intercept')) evtType = 'intercept';
-                        isRelevantNews = true;
-                        break;
+            doc.querySelectorAll('.tgme_widget_message').forEach(msg => {
+                const textEl = msg.querySelector('.tgme_widget_message_text');
+                const dateEl = msg.querySelector('time.time');
+                if(textEl && dateEl) {
+                    let text = textEl.innerText.replace(/[\n\r]+/g, ' - ').replace(/(<([^>]+)>)/gi, "").replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '').trim();
+                    let lowerText = text.toLowerCase();
+                    
+                    // Kill statements
+                    if (blockedNewsKeywords.some(word => lowerText.includes(word))) {
+                        return; 
                     }
-                }
-                
-                if (!isRelevantNews) return;
 
-                let mediaHTML = '';
-                if (item.enclosure && item.enclosure.link) {
-                    if (item.enclosure.type.includes('image')) {
-                        mediaHTML = `<img src="${item.enclosure.link}" loading="lazy" style="width:100%; display:block; border-radius:6px; max-height:180px; object-fit:contain; border: 1px solid rgba(255,255,255,0.1);" />`;
-                    } else if (item.enclosure.type.includes('video')) {
+                    // FILTER 2: Truncate long paragraphs to keep it snappy
+                    if (text.length > 220) {
+                        text = text.substring(0, 220) + '...';
+                    }
+
+                    let isRelevantNews = false;
+                    if (lowerText.includes('israel') || lowerText.includes('iran') || lowerText.includes('idf') || lowerText.includes('irgc') || lowerText.includes('hezbollah')) {
+                            isRelevantNews = true;
+                    }
+
+                    let matchedLat = null, matchedLng = null, matchedLoc = null, evtType = 'missile';
+                    for (const [key, geoData] of Object.entries(geoDB)) {
+                        if (geoData.aliases.some(a => lowerText.includes(a))) {
+                            let jittered = getJitteredCoords(geoData.coords[1], geoData.coords[0]);
+                            matchedLat = jittered.lat; matchedLng = jittered.lng; matchedLoc = key.toUpperCase();
+                            if(lowerText.includes('siren')) evtType = 'siren';
+                            else if(lowerText.includes('drone')) evtType = 'drone';
+                            else if(lowerText.includes('intercept')) evtType = 'intercept';
+                            isRelevantNews = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!isRelevantNews) return;
+
+                    let mediaHTML = '';
+                    const photoWrap = msg.querySelector('.tgme_widget_message_photo_wrap');
+                    if (photoWrap && photoWrap.style.backgroundImage) {
+                        const urlMatch = photoWrap.style.backgroundImage.match(/url\(['"]?(.*?)['"]?\)/);
+                        if (urlMatch && urlMatch[1]) {
+                            mediaHTML = `<img src="${urlMatch[1]}" style="width:100%; display:block; border-radius:6px; max-height:180px; object-fit:contain; border: 1px solid rgba(255,255,255,0.1);" />`;
+                        }
+                    }
+                    const videoWrap = msg.querySelector('video');
+                    if (videoWrap && videoWrap.src) {
                         mediaHTML = `
-                        <div style="position:relative; width:100%; border-radius:6px; overflow:hidden; border: 1px solid rgba(255,255,255,0.1); background:#050505; margin-top:8px;">
-                            <video preload="none" src="${item.enclosure.link}" playsinline style="width:100%; display:block; max-height:180px; object-fit:contain; cursor:pointer;" onclick="toggleNativeVideo(this)"></video>
-                            <div class="vid-play-btn" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:rgba(48,209,88,0.8); border-radius:50%; width:40px; height:40px; display:flex; justify-content:center; align-items:center; pointer-events:none;">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                            </div>
+                        <div style="position:relative; width:100%; border-radius:6px; overflow:hidden; border: 1px solid rgba(255,255,255,0.1); background:#000;">
+                            <video src="${videoWrap.src}" autoplay loop muted playsinline onclick="this.muted=!this.muted; this.nextElementSibling.innerText = this.muted ? '🔇 TAP TO UNMUTE' : '🔊 MUTE'" style="width:100%; display:block; max-height:180px; object-fit:contain; cursor:pointer;"></video>
+                            <div style="position:absolute; bottom:6px; right:6px; background:rgba(0,0,0,0.8); color:#fff; font-size:0.6rem; font-weight:bold; padding:4px 8px; border-radius:4px; pointer-events:none;">🔇 TAP TO UNMUTE</div>
                         </div>`;
                     }
-                }
 
-                let ts = new Date(item.pubDate.replace(/-/g, '/')).getTime();
-                if(isNaN(ts)) ts = Date.now();
-                const uniqueId = sourceName.replace(/[^a-zA-Z0-9]/g, '') + '_' + ts;
+                    let ts = new Date(dateEl.getAttribute('datetime')).getTime();
+                    const uniqueId = sourceName.replace(/[^a-zA-Z0-9]/g, '') + '_' + ts;
 
-                const newNewsObj = { 
-                    id: uniqueId,
-                    channel: sourceName, text: text, date: ts, 
-                    mediaHTML: mediaHTML,
-                    lat: matchedLat, lng: matchedLng, location: matchedLoc, eventType: evtType
-                };
+                    const newNewsObj = { 
+                        id: uniqueId,
+                        channel: sourceName, text: text, date: ts, 
+                        mediaHTML: mediaHTML,
+                        lat: matchedLat, lng: matchedLng, location: matchedLoc, eventType: evtType
+                    };
 
-                if(!allNewsData.some(d => d.id === uniqueId)) {
-                    allNewsData.push(newNewsObj);
-                    newItemsFound = true;
+                    if(!allNewsData.some(d => d.id === uniqueId)) {
+                        allNewsData.push(newNewsObj);
+                        newItemsFound = true;
+                    }
                 }
             });
 
-            if(newItemsFound) { debouncedRenderNews(); }
-        }, delay);
-        delay += 400; // 400ms stagger between channel fetches
-    }
-};
+            if(newItemsFound) { renderNewsFeeds(); }
+
+        } catch (e) {}
+    });
+}
 
 window.renderNewsFeeds = function() {
     const nowMs = Date.now();
+    
+    // 1. Process regular OSINT News
     let processedNews = allNewsData.map(p => { p.timeAgo = (nowMs - p.date) / 3600000; return p; })
-        .filter(p => p.timeAgo <= 999999 && p.timeAgo >= 0) 
-        .sort((a,b) => a.timeAgo - b.timeAgo);
+        .filter(p => p.timeAgo <= 999999 && p.timeAgo >= 0);
 
-    const renderList = (posts, elId, limit, isSummary = false) => {
+    // 2. IMPORT MAP / FIREBASE ALERTS (12 Hour Lifespan Logic)
+    let mapAlertNews = globalIntelData
+        .filter(d => {
+            let tAgo = (nowMs - d.timestamp) / 3600000;
+            return tAgo <= 12 && tAgo >= 0; // Expires exactly after 12 hours
+        })
+        .map(d => {
+            return {
+                id: d.id + '_map',
+                channel: 'TACTICAL ALERT',
+                text: d.location + ' - ' + d.title,
+                date: d.timestamp,
+                mediaHTML: d.mediaHTML || '',
+                lat: d.lat, lng: d.lng, location: d.location, eventType: d.eventType,
+                timeAgo: (nowMs - d.timestamp) / 3600000,
+                isFromMap: true
+            };
+        });
+
+    // 3. Combine both streams and sort chronologically 
+    let combinedFeeds = [...processedNews, ...mapAlertNews].sort((a,b) => a.timeAgo - b.timeAgo);
+
+    const renderList = (posts, elId, limit) => {
         let html = '';
         posts.slice(0, limit).forEach(p => {
             let minutesAgo = Math.max(0, Math.floor(p.timeAgo * 60));
             let timeLabel = p.timeAgo > 1000 ? "ARCHIVE" : (minutesAgo < 1 ? "Just now" : minutesAgo < 60 ? minutesAgo + "m ago" : Math.floor(minutesAgo/60) + "h ago");
+            
             let tStr = `<span style="color: #30d158 !important; font-weight: 700;">${timeLabel}</span>`;
+            let channelColor = p.isFromMap ? '#ff3b30' : '#fff'; // Colorize tactical alerts
             
             let pinIcon = '';
             if(p.lat && p.lng) {
                 pinIcon = `<span style="color: #ff3b30; margin-right: 4px;">📍</span>`;
             }
 
-            if(isSummary) {
-                html += `<div class="sc-list-item"><div class="sc-summary-text">${pinIcon}${p.text}</div></div>`;
-            } else {
-                html += `
-                <div class="sc-list-item">
-                    <div style="display:flex; justify-content:space-between; margin-bottom: 4px;">
-                        <span style="font-weight: 700; color: #fff;">${pinIcon}${p.channel.replace('_TG','')}</span>${tStr}
-                    </div>
-                    <div style="color: #d1d1d6; line-height: 1.4; font-size: 0.75rem;">${p.text}</div>
-                    ${p.mediaHTML ? `<div style="margin-top: 8px; width: 100%; border-radius: 6px; overflow: hidden;">${p.mediaHTML}</div>` : ''}
-                </div>`;
-            }
+            html += `
+            <div class="sc-list-item">
+                <div style="display:flex; justify-content:space-between; margin-bottom: 4px;">
+                    <span style="font-weight: 700; color: ${channelColor};">${pinIcon}${p.channel.replace('_TG','')}</span>${tStr}
+                </div>
+                <div style="color: #d1d1d6; line-height: 1.4; font-size: 0.75rem;">${p.text}</div>
+                ${p.mediaHTML ? `<div style="margin-top: 8px; width: 100%; border-radius: 6px; overflow: hidden;">${p.mediaHTML}</div>` : ''}
+            </div>`;
         });
-        document.getElementById(elId).innerHTML = html || '<div style="padding:15px; color:#888; font-size:0.75rem;">No recent combat updates.</div>';
+        document.getElementById(elId).innerHTML = html || '<div style="padding:15px; color:#888; font-size:0.75rem;">No recent updates.</div>';
     };
 
-    renderList(processedNews, 'news-feed', 50, false);
-    
-    let summaryPosts = processedNews.filter(p => p.timeAgo <= 48 && p.text.length < 150); 
-    renderList(summaryPosts, 'summary-feed', 5, true); 
-    
-    renderList(processedNews.filter(p => 
-        (p.text.includes('Iran') || p.text.includes('IRAN') || p.channel.includes('IRAN')) && 
-        p.channel !== 'ME_OBSERVER_TG'
-    ), 'iran-news-feed', 20, false);
+    // Render Latest News: ME Observer + ANY Map Event within 12 hours
+    renderList(combinedFeeds.filter(p => p.channel === 'ME_OBSERVER_TG' || p.isFromMap), 'news-feed', 50);
 
-    renderList(processedNews.filter(p => 
-        (p.text.includes('Israel') || p.text.includes('ISRAEL') || p.text.includes('Tel Aviv') || p.text.includes('IDF') || p.channel.includes('ILTODAY')) && 
-        p.channel !== 'PRESSTV' && p.channel !== 'ME_OBSERVER_TG'
-    ), 'israel-news-feed', 20, false);
+    // Render Iran News: PressTV + ANY Map Event within 12 hours matching Iranian sectors
+    renderList(combinedFeeds.filter(p => p.channel === 'PRESSTV' || (p.isFromMap && (p.location === 'TEHRAN' || p.location === 'ISFAHAN' || p.location === 'SHIRAZ' || p.text.toLowerCase().includes('iran')))), 'iran-news-feed', 20);
     
-    let tickerPosts = processedNews.filter(p => (p.channel.includes('PRESS') || p.channel.includes('CLASH') || p.channel.includes('ALJAZEERA')) && p.text.length > 15 && p.text.length <= 150);
-    if(tickerPosts.length === 0) tickerPosts = processedNews.slice(0,5); 
+    // Ticker Logic (Fallback to recent posts if no mid-length text is found)
+    let tickerPosts = combinedFeeds.filter(p => p.text.length > 15 && p.text.length <= 150 && !p.isFromMap);
+    if(tickerPosts.length === 0) tickerPosts = combinedFeeds.slice(0,5); 
     let tickerHtml = '';
     tickerPosts.slice(0,8).forEach(p => { tickerHtml += `<span class="ticker-item">🚨 ${p.text.toUpperCase()}</span>`; });
+    
     const tickerEl = document.getElementById('live-ticker');
     tickerEl.innerHTML = tickerHtml + tickerHtml; 
     tickerEl.style.animation = 'none'; tickerEl.offsetHeight; 
