@@ -1,266 +1,287 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>IQWR | ISRAEL-US IRAN WAR ROOM</title>
+html { scroll-behavior: smooth; }
+*, *::before, *::after { box-sizing: border-box; }
+
+:root {
+    --bg-base: #000000; 
+    --glass-bg: rgba(25, 25, 25, 0.7); 
+    --glass-border: rgba(255, 255, 255, 0.15);
+    --glass-blur: blur(40px);
+    --glass-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.1);
     
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@400;600;700&family=League+Spartan:wght@700&display=swap" rel="stylesheet">
-    
-    <link href="https://unpkg.com/maplibre-gl@3.3.1/dist/maplibre-gl.css" rel="stylesheet" />
-    <script src="https://unpkg.com/maplibre-gl@3.3.1/dist/maplibre-gl.js"></script>
+    --text-primary: #f5f5f7;
+    --text-muted: #a1a1a6;
+    --accent: #0a84ff;
+    --normal: #30d158;
+    --warn: #ff9f0a;
+    --electric-red: #ff003c;
+    --font-mono: 'SF Mono', 'Monaco', monospace;
+    --font-sans: 'SF Pro Display', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
 
-    <link rel="stylesheet" href="style.css" />
-</head>
-<body>
+body {
+    background: radial-gradient(circle at 50% -20%, #1c1c1e 0%, var(--bg-base) 100%);
+    background-attachment: fixed; color: var(--text-primary); font-family: var(--font-sans);
+    margin: 0; padding: 0; line-height: 1.5; overflow-x: hidden; width: 100vw; height: 100vh;
+}
 
-    <div class="dashboard-pull-up" id="dash-arrow" onclick="toggleMapSheet()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
-    </div>
+/* FIX: Removed the transform animations that were breaking MapLibre marker coordinates */
+.tab-content { transition: opacity 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); width: 100%; }
+.hidden-tab { position: absolute !important; top: -9999px !important; left: -9999px !important; visibility: hidden !important; height: 0 !important; overflow: hidden !important; opacity: 0 !important; }
+.active-tab { opacity: 1; }
 
-    <nav class="mac-dock" id="main-nav">
-        <a onclick="switchTab('map-section', this)" class="nav-item active-nav" title="Map">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon><line x1="9" y1="3" x2="9" y2="18"></line><line x1="15" y1="6" x2="15" y2="21"></line></svg>
-        </a>
-        <a onclick="switchTab('news-section', this)" class="nav-item" title="News">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><line x1="8" y1="11" x2="16" y2="11"></line><line x1="8" y1="15" x2="16" y2="15"></line><line x1="8" y1="7" x2="10" y2="7"></line></svg>
-        </a>
-        <a onclick="switchTab('live-section', this)" class="nav-item" title="Live">
-            <div class="live-dot"></div>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg>
-        </a>
-        <a onclick="switchTab('stats-section', this)" class="nav-item" title="Stats">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
-        </a>
-    </nav>
+.map-wrapper { position: absolute; top:0; left:0; right:0; bottom:0; width: 100vw; height: 100vh; overflow: hidden; background: #000; z-index: 1;} 
+#map { width: 100%; height: 100%; position: absolute; top:0; left:0; outline: none; }
 
-    <div class="top-sticky-zone">
-        <div class="main-outer-pill" id="header-pill">
-            <div class="header-view-default" id="header-view-1">
-                <div class="h-left">
-                    <span class="pulse"></span>
-                    <span id="clock" class="h-date">SYNCING...</span>
-                </div>
-                <div class="h-center">
-                    <div class="title-stack">
-                        <h1>IQWR</h1>
-                        <span>WAR ROOM</span>
-                    </div>
-                </div>
-                <div class="h-right">
-                    <button class="hamburger-btn" onclick="toggleHeader()">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-                    </button>
-                </div>
-            </div>
+.maplibregl-popup-content { background: rgba(20, 20, 20, 0.95); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 16px; padding: 15px; box-shadow: 0 15px 35px rgba(0,0,0,0.9); color: #fff; font-family: var(--font-sans); min-width: 250px; }
+.maplibregl-popup-tip { border-top-color: rgba(20, 20, 20, 0.95) !important; }
+.maplibregl-popup-close-button { color: #fff; font-size: 1.2rem; display: none;}
 
-            <div class="header-view-expanded" id="header-view-2">
-                <div class="h-left">
-                    <span class="pulse"></span>
-                </div>
-                <div class="h-center options-stack">
-                    <a href="about.html" class="btn-green">About</a>
-                    <a href="support.html" class="btn-green">Support</a>
-                </div>
-                <div class="h-right">
-                    <button class="close-btn-red" onclick="toggleHeader()">✕</button>
-                </div>
-            </div>
-        </div>
+.map-panel { 
+    position: absolute; bottom: 0; left: 50%; transform: translateX(-50%) translateY(calc(100% - 40px)); 
+    width: 95%; max-width: 450px; height: 50vh; 
+    background: var(--glass-bg); backdrop-filter: var(--glass-blur); border: 1px solid var(--glass-border); 
+    border-radius: 32px 32px 0 0; box-shadow: var(--glass-shadow); transition: transform 0.6s cubic-bezier(0.32, 0.72, 0, 1); z-index: 10; display: flex; flex-direction: column; 
+}
+.map-panel.open { transform: translateX(-50%) translateY(0); }
+.drag-handle-container { width: 100%; height: 40px; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; background: rgba(0,0,0,0.2); border-bottom: 1px solid rgba(255,255,255,0.05); flex-shrink: 0; }
+.drag-handle { width: 40px; height: 4px; background: rgba(255,255,255,0.4); border-radius: 10px; margin-bottom: 4px;}
+.drag-label { font-size: 0.6rem; font-family: var(--font-mono); color: var(--text-muted); font-weight: bold; letter-spacing: 2px;}
 
-        <div class="ticker-wrap glass-ticker" id="ticker-container" style="opacity: 0;">
-            <div class="ticker-move" id="live-ticker"></div>
-        </div>
-    </div>
+.dashboard-pull-up { position: fixed; bottom: 85px; left: 50%; transform: translateX(-50%); width: 40px; height: 40px; background: rgba(30,30,30,0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); border-radius: 50%; display: flex; justify-content: center; align-items: center; color: #fff; cursor: pointer; z-index: 9; transition: 0.3s; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+.dashboard-pull-up:hover { background: rgba(255,255,255,0.2); transform: translateX(-50%) translateY(-5px); }
+.dashboard-pull-up svg { width: 20px; height: 20px; stroke: #fff; }
 
-    <div id="map-section" class="tab-content active-tab map-wrapper">
-        <div id="map"></div>
-        
-        <div id="custom-popup" class="glass-popup hidden">
-            <button class="close-popup" onclick="closePopupAndOpenSheet()">×</button>
-            <div id="custom-popup-content"></div>
-        </div>
+.sheet-content { flex: 1; overflow-y: hidden; display: flex; flex-direction: column; }
+.legend { display: flex; gap: 12px; font-size: 0.7rem; color: var(--text-muted); justify-content: center; flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-weight: 600;}
+.l-box { width: 10px; height: 10px; border-radius: 50%; }
+.l-red { background: #ff3b30; box-shadow: 0 0 8px #ff3b30;} .l-blue { background: #0a84ff; box-shadow: 0 0 8px #0a84ff;} .l-orange { background: #ff9f0a; box-shadow: 0 0 8px #ff9f0a;} .l-grey { background: #98989d; box-shadow: 0 0 8px #98989d;}
 
-        <div class="map-panel" id="map-bottom-sheet">
-            <div class="drag-handle-container" onclick="toggleMapSheet()">
-                <div class="drag-handle"></div>
-                <span class="drag-label">TACTICAL FEED</span>
-            </div>
-            <div class="sheet-content">
-                <div class="header" style="background: transparent; border-bottom: 1px solid var(--glass-border);">
-                    <div class="legend" style="padding: 10px 15px;">
-                        <div class="legend-item"><div class="l-box l-red"></div> MISSILE</div>
-                        <div class="legend-item"><div class="l-box l-blue"></div> SIREN</div>
-                        <div class="legend-item"><div class="l-box l-orange"></div> DRONE</div>
-                        <div class="legend-item"><div class="l-box l-grey"></div> INTERCEPT</div>
-                    </div>
-                </div>
-                <div class="time-filters">
-                    <button class="glass-btn refresh-btn" onclick="forceRefresh()">↻ REFRESH</button>
-                    <button class="filter-btn active" onclick="setFilter(24)" id="btn-24">24H</button>
-                    <button class="filter-btn" onclick="setFilter(999999)" id="btn-999999">ALL TIME</button>
-                </div>
-                <div class="feed-container" id="feed"></div>
-            </div>
-        </div>
-    </div>
+.time-filters { display: flex; padding: 10px 15px; gap: 8px; border-bottom: 1px solid var(--glass-border); background: rgba(0,0,0,0.1); }
+.refresh-btn { flex: 1.5; background: rgba(10, 132, 255, 0.15); color: #0a84ff; border: 1px solid rgba(10, 132, 255, 0.3); padding: 6px 10px; font-family: var(--font-sans); font-size: 0.75rem; cursor: pointer; border-radius: 8px; font-weight: 700; outline: none; transition: 0.3s;}
+.filter-btn { flex: 1; background: rgba(255, 255, 255, 0.05); color: var(--text-muted); border: 1px solid transparent; padding: 6px 0; font-family: var(--font-sans); font-size: 0.75rem; cursor: pointer; border-radius: 8px; font-weight: 600; transition: 0.3s;}
+.filter-btn.active { background: rgba(255, 255, 255, 0.15); border-color: var(--glass-border); color: #fff; }
 
-    <div id="news-section" class="tab-content hidden-tab stacked-dashboard">
-        <div class="panel">
-            <div class="panel-header"><div style="display:flex; align-items:center;"><div class="live-dot-green"></div>Latest News</div><span>(ME Observer)</span></div>
-            <div class="panel-content"><div id="news-feed" class="skel-list"></div></div>
-        </div>
-        <div class="panel">
-            <div class="panel-header"><div style="display:flex; align-items:center;"><div class="live-dot-green"></div>Iran News</div><span>Press TV</span></div>
-            <div class="panel-content"><div id="iran-news-feed" class="skel-list"></div></div>
-        </div>
-        
-        <div class="scroll-runway"></div> 
-    </div>
+.feed-container { padding: 10px 15px 120px 15px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 8px; font-family: var(--font-sans); min-height: 0; }
+.feed-entry { border-left: 4px solid var(--warn); padding: 8px 12px; font-size: 0.7rem; background: rgba(255,255,255,0.05); border-top: 1px solid var(--glass-border); border-right: 1px solid var(--glass-border); border-bottom: 1px solid var(--glass-border); border-radius: 10px; color: var(--text-primary); cursor: pointer; transition: 0.3s;}
+.feed-entry:hover { background: rgba(255,255,255,0.1); transform: scale(1.02); }
+.feed-entry.missile { border-left-color: #ff3b30; } .feed-entry.siren { border-left-color: #0a84ff; } .feed-entry.drone { border-left-color: #ff9f0a; } .feed-entry.intercept { border-left-color: #98989d; }
+.entry-time { font-weight: 700; font-size: 0.6rem; margin-bottom: 4px; display: flex; justify-content: space-between; font-family: var(--font-mono);}
+.entry-desc { color: #d1d1d6; line-height: 1.3; font-size: 0.7rem; }
 
-    <div id="live-section" class="tab-content hidden-tab stacked-dashboard">
-        <div class="panel">
-            <div class="panel-header">Al Jazeera English 
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <button class="custom-play-btn" onclick="toggleIframePlay(this, 'iframe-aljazeera')">[ PAUSE ]</button>
-                    <div class="live-pill"><span class="live-blink"></span>LIVE</div>
-                </div>
-            </div>
-            <div class="panel-content live-cam-wrapper">
-                <iframe id="iframe-aljazeera" src="https://www.youtube.com/embed/live_stream?channel=UCNye-wNBqNL5ZzHSJj3l8Bg&autoplay=1&mute=1&playsinline=1&enablejsapi=1" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen style="position:absolute; top:0; left:0; width:100%; height:100%; border:none;"></iframe>
-            </div>
-        </div>
-        <div class="panel">
-            <div class="panel-header">Live Cam - Israel 
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <button class="custom-play-btn" onclick="toggleIframePlay(this, 'iframe-telaviv')">[ PAUSE ]</button>
-                    <div class="live-pill"><span class="live-blink"></span>LIVE</div>
-                </div>
-            </div>
-            <div class="panel-content live-cam-wrapper" id="tel-aviv-cam">
-                <div class="glass-shield"></div>
-                <iframe id="iframe-telaviv" src="https://www.youtube.com/embed/VehGieRi72w?autoplay=1&mute=1&playsinline=1&controls=0&enablejsapi=1" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen style="position:absolute; top:0; left:0; width:100%; height:100%; border:none; pointer-events: none;"></iframe>
-                <button class="custom-fs-btn" onclick="toggleFullScreen(document.getElementById('tel-aviv-cam'))">[ FULLSCREEN ]</button>
-            </div>
-        </div>
-        <div class="panel">
-            <div class="panel-header">Live Cam - Lebanon 
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <button class="custom-play-btn" onclick="toggleIframePlay(this, 'iframe-beirut')">[ PAUSE ]</button>
-                    <div class="live-pill"><span class="live-blink"></span>LIVE</div>
-                </div>
-            </div>
-            <div class="panel-content live-cam-wrapper" id="beirut-cam">
-                <div class="glass-shield"></div>
-                <iframe id="iframe-beirut" src="https://www.youtube.com/embed/gmtlJ_m2r5A?autoplay=1&mute=1&playsinline=1&controls=0&enablejsapi=1" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen style="position:absolute; top:0; left:0; width:100%; height:100%; border:none; pointer-events: none;"></iframe>
-                <button class="custom-fs-btn" onclick="toggleFullScreen(document.getElementById('beirut-cam'))">[ FULLSCREEN ]</button>
-            </div>
-        </div>
+/* FIXED HEADER */
+.top-sticky-zone { position: fixed; top: 0; left: 0; width: 100vw; z-index: 9999; pointer-events: none; display: flex; flex-direction: column; align-items: center; padding-top: 15px; }
 
-        <div class="scroll-runway"></div> 
-    </div>
+.main-outer-pill {
+    position: relative; overflow: hidden;
+    background: rgba(20, 20, 20, 0.85); backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
+    border: 1px solid rgba(255,255,255,0.15); border-radius: 40px;
+    width: 95%; max-width: 1000px; height: 55px; margin: 0 auto;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5); pointer-events: auto;
+    transition: all 0.3s ease;
+}
 
-    <div id="stats-section" class="tab-content hidden-tab stacked-dashboard">
-        <div class="panel wallet-override-panel">
-            <div class="wallet-container">
-                <div class="app-container">
-                  <div class="wallet">
-                    <div class="wallet-back"></div>
-                    <div class="card stripe" style="background: #003087;">
-                      <div class="card-inner">
-                        <div class="card-top"><span>🇺🇸 UNITED STATES</span></div>
-                        <div class="card-bottom">
-                          <div class="card-info"><span class="label">Status</span><span class="value">ACTIVE SPT</span></div>
-                          <div class="card-number-wrapper">
-                            <span class="hidden-stars">EXP: HIGH</span>
-                            <span class="card-number" id="burn-us">$0</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="card wise" style="background: #1a5b9e;">
-                      <div class="card-inner">
-                        <div class="card-top"><span>🇮🇱 ISRAEL (IDF)</span></div>
-                        <div class="card-bottom">
-                          <div class="card-info"><span class="label">Status</span><span class="value">ENGAGED</span></div>
-                          <div class="card-number-wrapper">
-                            <span class="hidden-stars">EXP: CRIT</span>
-                            <span class="card-number" id="burn-il">$0</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="card paypal" style="background: #9e1a1a; color: white;">
-                      <div class="card-inner">
-                        <div class="card-top"><span>🇮🇷 IRAN (IRGC)</span></div>
-                        <div class="card-bottom">
-                          <div class="card-info"><span class="label">Status</span><span class="value" style="color:#ffcccc">MOBILIZED</span></div>
-                          <div class="card-number-wrapper">
-                            <span class="hidden-stars">EXP: SEV</span>
-                            <span class="card-number" id="burn-ir" style="color:white">$0</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="pocket">
-                      <svg class="pocket-svg" viewBox="0 0 280 160" fill="none">
-                        <path d="M 0 20 C 0 10, 5 10, 10 10 C 20 10, 25 25, 40 25 L 240 25 C 255 25, 260 10, 270 10 C 275 10, 280 10, 280 20 L 280 120 C 280 155, 260 160, 240 160 L 40 160 C 20 160, 0 155, 0 120 Z" fill="#152415"></path>
-                        <path d="M 8 22 C 8 16, 12 16, 15 16 C 23 16, 27 29, 40 29 L 240 29 C 253 29, 257 16, 265 16 C 268 16, 272 16, 272 22 L 272 120 C 272 150, 255 152, 240 152 L 40 152 C 25 152, 8 152, 8 120 Z" stroke="#3d5635" stroke-width="1.5" stroke-dasharray="6 4"></path>
-                      </svg>
-                      <div class="pocket-content">
-                        <div style="position: relative; height: 24px; width: 100%;">
-                          <div class="balance-stars">EST. BURN</div>
-                          <div class="balance-real" id="burn-total">$0</div>
-                        </div>
-                        <div style="color: #698263; font-size: 11px; font-weight: 500; text-transform: uppercase;">Open Source Est.</div>
-                        <div class="eye-icon-wrapper">
-                          <svg class="eye-icon eye-slash" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle><line x1="3" y1="3" x2="21" y2="21"></line></svg>
-                          <svg class="eye-icon eye-open" style="opacity: 0;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div> 
-            </div>
-        </div>
+.header-view-default, .header-view-expanded {
+    display: flex; justify-content: space-between; align-items: center;
+    width: 100%; height: 100%; padding: 0 20px;
+    position: absolute; top: 0; left: 0;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
 
-        <div class="panel">
-            <div class="panel-header">Macro Markets <span>Global Assets</span></div>
-            <div class="panel-content" style="position: relative;">
-                <div class="tradingview-widget-container" style="height: 100%; width: 100%; position: relative; z-index: 2;">
-                    <div class="tradingview-widget-container__widget" style="height:calc(100% - 32px); width:100%;"></div>
-                    <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-market-overview.js" async>
-                    { "colorTheme": "dark", "dateRange": "1D", "showChart": true, "locale": "en", "isTransparent": true, "showSymbolLogo": true, "width": "100%", "height": "100%", "tabs": [{ "title": "Global Assets", "symbols": [ { "s": "BITSTAMP:BTCUSD", "d": "Bitcoin (USD)" }, { "s": "TVC:USOIL", "d": "WTI Crude Oil (USD)" }, { "s": "TVC:GOLD", "d": "Gold (USD)" } ]}] }
-                    </script>
-                </div>
-            </div>
-        </div>
-        
-        <div class="panel">
-            <div class="panel-header">Live Maritime Radar <span>Gulf Sector</span></div>
-            <div class="panel-content" style="position: relative; overflow: hidden; background: #000;">
-                <iframe src="https://www.marinetraffic.com/en/ais/embed/zoom:5/centery:25.0/centerx:55.0/maptype:3/shownames:false/mmsi:0/shipid:0/fleet:/fleet_id:/vtypes:/showmenu:false/remember:false" style="position:absolute; top:-10px; left:-10px; width:calc(100% + 20px); height:calc(100% + 20px); border:none;"></iframe>
-            </div>
-        </div>
+.header-view-expanded { opacity: 0; transform: translateY(-20px); pointer-events: none; }
+.header-view-expanded.show { opacity: 1; transform: translateY(0); pointer-events: auto; }
+.header-view-default.hide { opacity: 0; transform: translateY(20px); pointer-events: none; }
 
-        <div class="panel">
-            <div class="panel-header">Live Flight Radar <span>Gulf Sector</span></div>
-            <div class="panel-content" style="position: relative; overflow: hidden; background: #000;">
-                <iframe src="https://globe.adsbexchange.com/?lat=24.5&lon=53.5&zoom=6&hideSidebar=1&hideButtons=1" style="position:absolute; top:-30px; left:-30px; width:calc(100% + 60px); height:calc(100% + 60px); border:none;"></iframe>
-            </div>
-        </div>
-        <div class="panel">
-            <div class="panel-header">Traffic By Region <span>Internal Nodes</span></div>
-            <div class="panel-content">
-                <iframe class="auto-refresh-iframe" src="https://radar.cloudflare.com/embed/TrafficVolumeByRegionXY?dateRange=1d&location=ir&metric=HTTP_REQUESTS&theme=dark" style="position:absolute; top:0; left:0; width:100%; height:100%; border:none;"></iframe>
-            </div>
-        </div>
+.h-left { display: flex; align-items: center; gap: 8px; width: 30%; }
+.h-center { display: flex; justify-content: center; align-items: center; width: 40%; }
+.h-right { display: flex; justify-content: flex-end; align-items: center; width: 30%; }
 
-        <div class="scroll-runway"></div> 
-    </div>
+.h-date { font-size: 0.65rem; color: var(--normal); font-family: var(--font-mono); font-weight: 600; text-transform: uppercase;}
+.title-stack { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.title-stack h1 { margin: 0; font-size: 1.2rem; line-height: 1; font-family: 'League Spartan', sans-serif; letter-spacing: 1px; color: #fff;}
+.title-stack span { font-size: 0.45rem; color: var(--text-muted); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 2px;}
 
-    <script type="module" src="script.js"></script>
-</body>
-</html>
+.hamburger-btn { background: transparent; border: none; color: #fff; cursor: pointer; display: flex; justify-content: center; align-items: center; width: 36px; height: 36px; transition: 0.2s; outline: none; }
+.hamburger-btn:hover { color: #ffea00; }
+.hamburger-btn svg { width: 24px; height: 24px; stroke: currentColor; }
+
+.options-stack { display: flex; gap: 10px; }
+.btn-green { border: 1px solid #30d158; color: #30d158; border-radius: 20px; padding: 6px 18px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; text-decoration: none; font-size: 0.75rem; background: rgba(48,209,88,0.1); transition: 0.2s; white-space: nowrap;}
+.btn-green:hover { background: #30d158; color: #000; box-shadow: 0 0 10px #30d158;}
+.close-btn-red { background: rgba(255,59,48,0.15); border: 1px solid #ff3b30; color: #ff3b30; border-radius: 50%; width: 32px; height: 32px; display: flex; justify-content: center; align-items: center; font-size: 1.1rem; cursor: pointer; transition: 0.2s;}
+.close-btn-red:hover { background: #ff3b30; color: #fff; transform: rotate(90deg); box-shadow: 0 0 10px #ff3b30;}
+
+.glass-ticker { 
+    background: rgba(255, 59, 48, 0.2) !important; backdrop-filter: var(--glass-blur); 
+    border: 1px solid rgba(255, 59, 48, 0.5) !important; margin: 10px auto 0 auto; 
+    box-shadow: 0 8px 24px rgba(255, 59, 48, 0.15); pointer-events: auto; 
+    height: 24px; width: 95%; max-width: 1000px; 
+    border-radius: 40px; transition: opacity 0.5s ease;
+}
+.ticker-wrap { color: #ffffff; padding: 2px 15px; overflow: hidden; white-space: nowrap; font-weight: bold; font-family: var(--font-mono); font-size: 0.6rem; display: flex; align-items: center; border-radius: 30px; height: 100%;}
+.ticker-move { display: inline-block; padding-left: 100%; animation: ticker linear infinite; }
+.ticker-item { margin-right: 50px; }
+@keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
+
+.pulse { height: 8px; width: 8px; background-color: var(--normal); border-radius: 50%; display: inline-block; box-shadow: 0 0 12px var(--normal); animation: pulse 2s infinite; }
+@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+.live-dot-green { width: 8px; height: 8px; background-color: var(--normal); border-radius: 50%; display: inline-block; margin-right: 8px; animation: pulse-green 1.5s infinite; }
+@keyframes pulse-green { 0%, 100% { opacity: 1; box-shadow: 0 0 10px var(--normal);} 50% { opacity: 0.4; box-shadow: 0 0 2px var(--normal);} }
+
+.live-pill {
+    background: rgba(255, 0, 60, 0.2); border: 1px solid rgba(255, 0, 60, 0.6); color: var(--electric-red);
+    padding: 3px 10px; border-radius: 20px; font-size: 0.65rem; font-weight: 800; display: flex; align-items: center;
+    gap: 6px; letter-spacing: 1px; font-family: var(--font-mono);
+}
+.live-blink { width: 6px; height: 6px; background: var(--electric-red); border-radius: 50%; animation: pulse-electric 1s infinite; }
+@keyframes pulse-electric { 0%, 100% { opacity: 1; box-shadow: 0 0 10px var(--electric-red); } 50% { opacity: 0.3; } }
+
+.custom-play-btn, .custom-fs-btn { background: transparent; color: var(--text-muted); border: none; font-family: var(--font-mono); font-size: 0.6rem; cursor: pointer; font-weight: bold; transition: 0.2s;}
+.custom-play-btn:hover, .custom-fs-btn:hover { color: #fff;}
+
+/* --- THE PERFECT STACKED DASHBOARD ENGINE --- */
+.stacked-dashboard { 
+    position: relative; z-index: 5; 
+    display: block; 
+    padding: 15px; 
+    padding-top: 100px; 
+    padding-bottom: 150px; 
+    max-width: 1000px; margin: 0 auto; width: 100%; 
+}
+
+.scroll-runway { display: none; }
+
+.stacked-dashboard .panel { 
+    position: sticky; 
+    margin-bottom: 20px; 
+    background: var(--glass-bg); backdrop-filter: var(--glass-blur); 
+    border: 1px solid rgba(255, 0, 60, 0.4); 
+    border-radius: 20px; 
+    display: flex; flex-direction: column; 
+    height: 60vh; 
+    min-height: 400px;
+    box-shadow: 0 -15px 35px rgba(0,0,0,0.5), inset 0 0 15px rgba(255, 0, 60, 0.1); 
+    transition: all 0.3s ease; width: 100%; overflow: hidden; 
+}
+
+.stacked-dashboard .panel:nth-child(1) { top: 110px; z-index: 10; }
+.stacked-dashboard .panel:nth-child(2) { top: 156px; z-index: 11; }
+.stacked-dashboard .panel:nth-child(3) { top: 202px; z-index: 12; }
+.stacked-dashboard .panel:nth-child(4) { top: 248px; z-index: 13; }
+.stacked-dashboard .panel:nth-child(5) { top: 294px; z-index: 14; }
+.stacked-dashboard .panel:nth-child(6) { top: 340px; z-index: 15; }
+
+.stacked-dashboard .wallet-override-panel { border: none !important; box-shadow: none !important; background: transparent !important; backdrop-filter: none !important;}
+
+.panel-header { height: 46px; padding: 0 16px; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.6); font-size: 0.9rem; font-weight: 700; color: #fff; text-transform: uppercase; letter-spacing: 1px; flex-shrink: 0;}
+.panel-header span { font-size: 0.65rem; color: var(--text-muted); font-weight: 500; text-transform: none; letter-spacing: 0;}
+
+.panel-content { flex: 1 1 auto; overflow-y: auto; padding-bottom: 15px; position: relative; min-height: 0; } 
+
+.sc-list-item { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; gap: 4px; font-size: 0.75rem; width: 100%; box-sizing: border-box;}
+.sc-list-item:hover { background: rgba(255,255,255,0.05); }
+.sc-summary-text { color: #fff; line-height: 1.4; font-size: 0.75rem; font-weight: 600;}
+
+.skel-list { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.skel-pill { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 12px; position: relative; overflow: hidden; }
+.skel-pill::after { content:''; position: absolute; top:0; left:0; height:100%; width:30%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent); animation: sweep 1.5s infinite linear; }
+.skel-line { height: 6px; border-radius: 3px; background: #2c2c2e; margin-bottom: 8px; }
+.skel-line.short { width: 30%; } .skel-line.long { width: 90%; } .skel-line.med { width: 60%; margin-bottom: 0; }
+@keyframes sweep { 0% { left: -50%; } 100% { left: 100%; } }
+
+.mac-dock { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; justify-content: center; align-items: center; background: rgba(20, 20, 20, 0.8); backdrop-filter: blur(40px) saturate(150%); -webkit-backdrop-filter: blur(40px); padding: 8px 16px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7), inset 0 1px 1px rgba(255,255,255,0.15); z-index: 10000; transition: all 0.3s ease; }
+.mac-dock .nav-item { display: flex; align-items: center; justify-content: center; width: 45px; height: 45px; border-radius: 50%; color: #a1a1a6; background: rgba(255,255,255,0.05); cursor: pointer; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); position: relative; z-index: 2; }
+.mac-dock .nav-item:hover { background: rgba(255, 255, 255, 0.15); color: #fff; transform: translateY(-8px) scale(1.15); box-shadow: 0 10px 20px rgba(0,0,0,0.5);}
+.mac-dock .nav-item.active-nav { background: rgba(48, 209, 88, 0.15); color: #30d158; box-shadow: 0 0 15px rgba(48, 209, 88, 0.4), inset 0 0 5px rgba(48,209,88,0.2); }
+.nav-item svg { width: 20px; height: 20px; stroke: currentColor; }
+
+.glass-popup { position: absolute; top: 140px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 320px; background: rgba(20, 20, 20, 0.95); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 16px; padding: 20px; z-index: 50; box-shadow: 0 15px 35px rgba(0,0,0,0.9); transition: 0.3s ease; color: #fff; font-family: var(--font-sans); }
+.glass-popup.hidden { opacity: 0; pointer-events: none; transform: translate(-50%, -10px); }
+.glass-popup img, .glass-popup video { max-width: 100% !important; height: auto !important; max-height: 180px !important; object-fit: contain !important; border-radius: 8px !important; margin-top: 10px !important; background: #000; border: 1px solid rgba(255,255,255,0.1); display: block; box-sizing: border-box; }
+.close-popup { position: absolute; top: 10px; right: 15px; background: transparent; border: none; color: #888; font-size: 1.5rem; cursor: pointer; }
+.close-popup:hover { color: #fff; }
+
+/* FIX: Absolute clean structure so MapLibre handles exact placement without DOM conflict */
+.zero-marker { 
+    width: 14px; 
+    height: 14px;
+    cursor: pointer; 
+    pointer-events: auto; 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+}
+.zero-dot { width: 3px; height: 3px; border-radius: 50%; box-shadow: 0 0 2px rgba(0,0,0,0.9); border: 1px solid rgba(255,255,255,0.8); z-index: 2; transition: 0.2s ease; position: relative;}
+.zero-pulse { position: absolute; width: 14px; height: 14px; border: 1px solid; border-radius: 50%; pointer-events: none; z-index: 1; opacity: 0; animation: none;}
+
+.zero-marker.is-recent .zero-pulse { animation: map-pulse 1.5s infinite ease-out; opacity: 1; border-color: inherit; }
+.zero-marker.active-marker .zero-pulse { animation: map-pulse-fast 0.8s infinite ease-out; opacity: 1; border-color: inherit;}
+.zero-marker.active-marker .zero-dot { transform: scale(1.5); box-shadow: 0 0 8px 2px currentColor; border-color: #fff; }
+.zero-marker:hover .zero-dot { transform: scale(1.5); box-shadow: 0 0 8px currentColor; }
+
+@keyframes map-pulse { 0% { transform: scale(0.3); opacity: 1; } 100% { transform: scale(1.2); opacity: 0; } }
+@keyframes map-pulse-fast { 0% { transform: scale(0.3); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
+
+.siren-radius { position: absolute; width: 30px; height: 30px; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.4); border-radius: 50%; pointer-events: none; z-index: -1; opacity: 0; transition: opacity 0.3s;}
+.siren-radius.siren-active { animation: map-pulse 2s infinite ease-out; opacity: 1;}
+.zero-marker.active-marker .siren-radius { animation: map-pulse 2s infinite ease-out; opacity: 1;}
+
+::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px;}
+
+/* WAR WALLET */
+.wallet-container { display: flex; justify-content: center; align-items: center; padding: 20px 0; height: 100%;}
+.app-container { transform: scale(0.9); } 
+.wallet { position: relative; width: 280px; height: 230px; cursor: pointer; perspective: 1000px; display: flex; justify-content: center; align-items: flex-end; transition: transform 0.4s ease; margin: 0 auto;}
+.wallet-back { position: absolute; bottom: 0; width: 280px; height: 200px; background: #050505; border-radius: 22px 22px 60px 60px; z-index: 5; box-shadow: inset 0 25px 35px rgba(0, 0, 0, 0.6); border: 1px solid #222;}
+.card { position: absolute; width: 260px; height: 140px; left: 10px; border-radius: 16px; padding: 18px; color: white; box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.3), 0 -4px 15px rgba(0, 0, 0, 0.5); transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), z-index 0s; }
+.card-inner { display: flex; flex-direction: column; justify-content: space-between; height: 100%; }
+.card-top { display: flex; justify-content: space-between; align-items: center; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight:bold;}
+.card-bottom { display: flex; justify-content: space-between; align-items: flex-end; }
+.label { font-size: 8px; opacity: 0.7; text-transform: uppercase; margin-bottom: 2px; display: block; font-family: var(--font-mono);}
+.value { font-size: 10px; font-weight: 500; font-family: var(--font-mono);}
+.card-number-wrapper { text-align: right; }
+.hidden-stars { font-size: 14px; letter-spacing: 1px; font-family: var(--font-mono); color: rgba(255,255,255,0.8);}
+.card-number { display: none; font-size: 16px; letter-spacing: 1px; font-family: var(--font-mono); font-weight: bold;}
+
+.stripe { bottom: 90px; z-index: 10; } .wise { bottom: 65px; z-index: 20; } .paypal { bottom: 40px; z-index: 30; }
+.pocket { position: absolute; bottom: 0; width: 280px; height: 160px; z-index: 40; filter: drop-shadow(0 15px 25px rgba(0, 0, 0, 0.8)); }
+.pocket-content { position: absolute; top: 45px; width: 100%; text-align: center; z-index: 50; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.balance-stars { color: #888; font-size: 16px; letter-spacing: 2px; transition: 0.3s; font-family: var(--font-mono);}
+.balance-real { color: #30d158; font-size: 18px; font-weight: 700; opacity: 0; position: absolute; top: 0; left: 50%; transform: translate(-50%, 10px); transition: 0.3s; font-family: var(--font-mono); text-shadow: 0 0 10px rgba(48,209,88,0.4);}
+.eye-icon-wrapper { margin-top: 8px; height: 20px; width: 20px; position: relative; opacity: 0.3; transition: 0.3s; }
+.eye-icon { position: absolute; top: 0; left: 0; stroke: #fff; transition: 0.3s; }
+
+.wallet:hover { transform: translateY(-5px); } .wallet:hover .eye-icon-wrapper { opacity: 1; } .wallet:hover .stripe { transform: translateY(-75px) rotate(-3deg); } .wallet:hover .wise { transform: translateY(-45px) rotate(2deg); } .wallet:hover .paypal { transform: translateY(-10px); } .card:hover { z-index: 100 !important; transition-delay: 0s !important; } .wallet:hover .stripe:hover { transform: translateY(-60px) scale(1.05) rotate(0); } .wallet:hover .wise:hover { transform: translateY(-70px) scale(1.05) rotate(0); } .wallet:hover .paypal:hover { transform: translateY(-60px) scale(1.05) rotate(0); } .card:hover .hidden-stars { display: none; } .card:hover .card-number { display: block; } .wallet:hover .balance-stars { opacity: 0; } .wallet:hover .balance-real { opacity: 1; transform: translate(-50%, 0); } .wallet:hover .eye-slash { opacity: 0; transform: scale(0.5); } .wallet:hover .eye-open { opacity: 1; transform: scale(1.1); stroke: #30d158;}
+
+@media (max-width: 900px) {
+    .stacked-dashboard { padding: 10px; padding-top: 100px; padding-bottom: 150px; }
+    .stacked-dashboard .panel { height: 65vh; margin-bottom: 15px; }
+    .map-panel { width: 100%; height: 50vh; border-radius: 24px 24px 0 0;}
+    .mac-dock { width: 85%; padding: 6px 12px; gap: 10px;}
+    .mac-dock .nav-item { width: 35px; height: 35px; }
+}
+
+/* ==========================================
+   GLOBAL UI ALERTS (6-SECOND FLASH)
+   ========================================== */
+@keyframes flash-missile { 
+    0%, 100% { box-shadow: 0 0 0 transparent; border-color: var(--glass-border); } 
+    50% { box-shadow: 0 0 30px #ff3b30, inset 0 0 20px #ff3b30; border-color: #ff3b30; } 
+}
+@keyframes flash-siren { 
+    0%, 100% { box-shadow: 0 0 0 transparent; border-color: var(--glass-border); } 
+    50% { box-shadow: 0 0 30px #0a84ff, inset 0 0 20px #0a84ff; border-color: #0a84ff; } 
+}
+@keyframes flash-drone { 
+    0%, 100% { box-shadow: 0 0 0 transparent; border-color: var(--glass-border); } 
+    50% { box-shadow: 0 0 30px #ff9f0a, inset 0 0 20px #ff9f0a; border-color: #ff9f0a; } 
+}
+@keyframes flash-intercept { 
+    0%, 100% { box-shadow: 0 0 0 transparent; border-color: var(--glass-border); } 
+    50% { box-shadow: 0 0 30px #98989d, inset 0 0 20px #98989d; border-color: #98989d; } 
+}
+
+.alert-missile { animation: flash-missile 1.5s ease-in-out infinite !important; }
+.alert-siren { animation: flash-siren 1.5s ease-in-out infinite !important; }
+.alert-drone { animation: flash-drone 1.5s ease-in-out infinite !important; }
+.alert-intercept { animation: flash-intercept 1.5s ease-in-out infinite !important; }
